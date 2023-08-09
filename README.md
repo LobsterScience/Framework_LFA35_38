@@ -1,2 +1,14 @@
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
 # Framework_LFA35_38
-Lobster stock assessment framework for fishing areas (LFAs) 35, 36 and 38
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+Framework_LFA35_38 is an R package developed for collaboration during
+the development of LFA 35-38 stock assessment framework. This package
+will rely heavily on LobsterScience/bio.lobster, amcook/bio.utilities.
+
+Please push all changes to the master branch, but have a separate local
+working directory.
