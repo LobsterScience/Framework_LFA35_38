@@ -5,7 +5,7 @@ require(bio.utilities)
 require(dplyr)
 require(devtools)
 require(sf)
-require(ggplot)
+require(ggplot2)
 
 a = lobster.db('process.logs.unfiltered')
 
@@ -65,7 +65,9 @@ aT = aT[c(-i,-j),]
 aT$L = paste(aT$LFA,aT$GRID_NUM,sep="-")
 aT = subset(aT,L %in% l)
 
+dir.create(file.path(outdir,'CPUE'))
 saveRDS(aT,file.path(outdir,'CPUE','CPUETempDepth.rds'))
+saveRDS(te1z,file.path(outdir,'CPUE','envtVarsbyGrid.rds'))
 
 ##############
 #characteristics

@@ -48,209 +48,373 @@ for(i in 1:length(aa)){
   g = merge(g,gl,by.x='t',by.y='time')
   cpue.lst[[i]] <- g
   
-  g<-as.data.frame(biasCorrCPUE(tmp,by.time=F))[2,]
-  g=c(g,as.numeric(unique(aa[[i]]$LFA)),as.numeric(unique(aa[[i]]$SYEAR)),as.numeric(aggregate(temp~1, data=tmp,FUN=mean)))
+  g<-as.data.frame(t(biasCorrCPUE(tmp,by.time=F)))
+  g=data.frame(g,LFA=as.numeric(unique(aa[[i]]$LFA)),SYEAR=as.numeric(unique(aa[[i]]$SYEAR)),temp=as.numeric(aggregate(temp~1, data=tmp,FUN=mean)))
   cpue.ann[[i]]=g
 }
+
+ca =as.data.frame(do.call(rbind,cpue.ann))
+ca$temp = round(ca$temp,1)
+ggplot(subset(ca,LFA %in% c(35,36,38)),aes(x=SYEAR,y=unBCPUE))+geom_point()+geom_line()+geom_errorbar(aes(ymin=l95,ymax=u95),width=0,alpha=.3)+
+  facet_wrap(~LFA)+xlab('Fishing Year (ending)')+ylab('unbiased CPUE')+theme_test()
 
 cc =as.data.frame(do.call(rbind,cpue.lst))
 cc$dyear = cc$yr+cc$t/365
 cc$temp = round(cc$temp,1)
 #cc = merge(cc,preT)
 
-dd = as.data.frame(do.call(rbind,cpue.ann))
-names(dd) = c('unBCPUE','lfa','yr','temp')
-dd$temp = round(dd$temp,1)
-dd = merge(dd,preT)
-dd$unBCPUE_tcorr = dd$unBCPUE / dd$pred
-dd = dd[order(dd$yr),]
-##overall
-#lfa 38
-with(subset(dd,lfa==38),plot(yr+.5,unBCPUE,pch=16,cex=.5,type='b',col='red',lwd=3))
-par(new=T)
-with(subset(dd,lfa==38),plot(yr+.5,unBCPUE_tcorr,pch=16,cex=.5,type='b',col='blue',lwd=3))
+ggplot(subset(cc,lfa %in% c(35) ),aes(x=t,y=unBCPUE))+geom_point(size=.1)+geom_errorbar(aes(ymin=l95,ymax=u95),width=0,alpha=.1)+
+  facet_wrap(~yr)+xlab('Day of Fishing Year')+ylab('unbiased CPUE')+ylim(c(0,8))+theme_test()
 
 
-cc$fYear = as.factor(cc$yr)
-#l38 = gam(unBCPUE~s(t),data=subset(cc,lfa==38),family = 'nb')
-#l38a = gam(unBCPUE~s(t)+s(temp),data=subset(cc,lfa==38),family = 'nb')
-#l38b = gam(unBCPUE~s(t)+s(temp)+s(t,by=fYear),data=subset(cc,lfa==38),family = 'nb')
-l38c = gam(unBCPUE~fYear+s(t)+s(temp)+s(t,by=fYear),data=subset(cc,lfa==38),family = 'nb') #best by AIC
-#l38d = gam(unBCPUE~fYear+s(t)+s(temp),data=subset(cc,lfa==38),family = 'nb')
+ggplot(subset(cc,lfa %in% c(36) ),aes(x=t,y=unBCPUE))+geom_point(size=.1)+geom_errorbar(aes(ymin=l95,ymax=u95),width=0,alpha=.1)+
+  facet_wrap(~yr)+xlab('Day of Fishing Year')+ylab('unbiased CPUE')+ylim(c(0,8))+theme_test()
 
-cc$land = cc$unBCPUE * cc$effort
-cc$leffort = log(cc$effort)
-l38cl = gam(land~fYear+s(t)+s(temp)+s(t,by=fYear)+offset(leffort),data=subset(cc,lfa==38),family = 'nb') #best by AIC
-l38dl = gam(land~fYear+s(t)+s(temp)+offset(leffort),data=subset(cc,lfa==38),family = 'nb') #best by AIC
+ggplot(subset(cc,lfa %in% c(38) ),aes(x=t,y=unBCPUE))+geom_point(size=.1)+geom_errorbar(aes(ymin=l95,ymax=u95),width=0,alpha=.1)+
+  facet_wrap(~yr)+xlab('Day of Fishing Year')+ylab('unbiased CPUE')+ylim(c(0,8))+theme_test()
 
-##Part 1, raw CPUE
-xx = subset(cc,lfa==38)
-l38P1 = gam(land~fYear+offset(leffort),data=xx,family = 'nb') #best by AIC
-pr1 = ggpredict(l38P1,terms='fYear',condition = c(leffort=0))
-summary(l38P1)
-AIC(l38P1)
 
-plot(pr1)
+saveRDS(list(ca,cc),file='unBIASED_CPUE.rds')
 
-##Part 2, add in Day of Season
-xx = subset(cc,lfa==38)
-l38P2 = gam(land~fYear+s(t)+offset(leffort),data=xx,family = 'nb') #best by AIC
-pr2 = ggpredict(l38P2,terms=c('t','fYear'),condition = c(leffort=0))
-summary(l38P2)
-AIC(l38P2)
-ggplot(pr2, aes(x = x, y = predicted)) +
+
+###beginning models
+
+aa = split(aT,f=list(aT$LFA,aT$SYEAR))
+oo = list()
+for(i in 1:length(aa)){
+  tmp<-aa[[i]]
+  if(nrow(tmp)==0) next
+  first.day<-min(tmp$DATE_FISHED)
+  tmp$time<-julian(tmp$DATE_FISHED,origin=first.day-1)
+  oo[[i]] = tmp
+}
+
+aT = do.call(rbind,oo)
+
+aT$fYear = as.factor(aT$SYEAR)
+aT$leffort = log(aT$NUM_OF_TRAPS)
+l38 = gam(WEIGHT_KG~fYear+offset(leffort),data=subset(aT,LFA==38),family = Gamma(link='log'),method='REML')
+l38a = gam(WEIGHT_KG~s(time)+fYear+offset(leffort),data=subset(aT,LFA==38),family = Gamma(link='log'),method='REML')
+l38b = gam(WEIGHT_KG~s(time)+s(time,by=fYear)+fYear+offset(leffort),data=subset(aT,LFA==38),family = Gamma(link='log'),method='REML')
+
+saveRDS(list(l38,l38a,l38b),'first3CPUEmodels.rds')
+
+aT$rLID = as.factor(aT$LICENCE_ID)
+l38c = gam(WEIGHT_KG~fYear+s(time,by=fYear)+s(rLID,bs='re')+offset(leffort),data=subset(aT,LFA==38),family = Gamma(link='log')) #best by AIC
+saveRDS(l38c,'CPUEmodel_LicenceRE.rds')
+
+
+aT$rV = as.factor(aT$VESSEL_NAME)
+l38d = gam(WEIGHT_KG~fYear+s(time,by=fYear)+s(rV,bs='re')+offset(leffort),data=subset(aT,LFA==38),family = Gamma(link='log')) #best by AIC
+saveRDS(l38c,'CPUEmodel_vesselRE.rds')
+
+
+#plot index
+#these are conditional
+pr1 = ggpredict(l38,terms='fYear',condition = c(leffort=0))
+pr2 = ggpredict(l38a,terms=c('fYear'),condition = c(leffort=0, time=20))
+pr3 = ggpredict(l38b,terms='fYear',condition = c(leffort=0,time=20))
+pr4 = ggpredict(l38c,terms='fYear',condition = c(leffort=0,time=20))
+pr5 = ggpredict(l38d,terms='fYear',condition = c(leffort=0,time=20))
+
+pr1t = data.frame(x=pr1$x,predicted=pr1$predicted,Model='Base',conf.low=pr1$conf.low,conf.high=pr1$conf.high,se = pr1$std.error)
+pr2t = data.frame(x=pr2$x,predicted=pr2$predicted,Model='BD',conf.low=pr2$conf.low,conf.high=pr2$conf.high,se = pr2$std.error)
+pr3t = data.frame(x=pr3$x,predicted=pr3$predicted,Model='BxD',conf.low=pr3$conf.low,conf.high=pr3$conf.high,se = pr3$std.error)
+pr4t = data.frame(x=pr4$x,predicted=pr4$predicted,Model='BxDRL',conf.low=pr4$conf.low,conf.high=pr4$conf.high,se = pr4$std.error)
+pr5t = data.frame(x=pr5$x,predicted=pr5$predicted,Model='BxDRV',conf.low=pr5$conf.low,conf.high=pr5$conf.high,se = pr5$std.error)
+
+pp = rbind(pr5, pr4t,pr3t,pr2t,pr1t)
+pp$x = as.numeric(as.character(pp$x))
+
+ggplot(pp, aes(x = x, y = predicted,colour=Model,fill=Model)) +
   geom_line() +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1)+
-  facet_wrap(~group)+
-  xlab('Day of Season')+
-  ylab('CPUE')
-
-##Part 3, add in Day of Season and Temp
-xx = subset(cc,lfa==38)
-l38P3 = gam(land~fYear+s(t)+s(temp)+offset(leffort),data=xx,family = 'nb') #best by AIC
-pr3 = ggpredict(l38P3,terms=c('t','fYear'),condition = c(leffort=0,temp=8))
-summary(l38P3)
-AIC(l38P3)
-ggplot(pr3, aes(x = x, y = predicted)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1)+
-  facet_wrap(~group)+
-  xlab('Day of Season')+
-  ylab('CPUE')
+  #scale_color_discrete(begin = 0, end = 1, option = 'viridis')+
+  xlab('Year')+
+  ylab('Standardized CPUE')+
+  theme_test(base_size = 14)
 
 
-##Part 4, add in Day of Season and Temp and interaction
-xx = subset(cc,lfa==38)
-l38P4 = gam(land~fYear+s(t)+s(temp)+s(t,by=fYear)+offset(leffort),data=xx,family = 'nb') #best by AIC
-pr4 = ggpredict(l38P4,terms=c('t','fYear'),condition = c(leffort=0,temp=8))
-summary(l38P4)
-AIC(l38P4)
-ggplot(pr4, aes(x = x, y = predicted)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1)+
-  facet_wrap(~group)+
-  xlab('Day of Season')+
-  ylab('CPUE')
-
-l38cl = gam(land~fYear+s(t)+s(temp)+s(t,by=fYear)+offset(leffort),data=subset(cc,lfa==38),family = 'nb') #best by AIC
-
+# ##these are marginal means and have equal weighting across all days of the season... which is why they are lower
+# require(ggeffects) #new as of 
+# b = emmeans::emmeans(l38,~fYear,offset=0,type='response',data=subset(aT,LFA==38))
+# bmm = as.data.frame(summary(b))[c('response', 'lower.CL','upper.CL')]
+# bmm$Model = 'base'\
+# bmm$Year = 2006:2022
+# d = emmeans::emmeans(l38a,~fYear+time,offset=0,type='response',data=subset(aT,LFA==38),weights="proportional")
+# dmm = as.data.frame(summary(d))[c('response', 'lower.CL','upper.CL')]
+# dmm$Model = 'BD'
+# dmm$Year = 2006:2022
+# f = emmeans::emmeans(l38b,~fYear,offset=0,type='response',data=subset(aT,LFA==38))
+# fmm = as.data.frame(summary(f))[c('response', 'lower.CL','upper.CL')]
+# fmm$Model = 'BxD'
+# fmm$Year = 2006:2022
+# oo = do.call(rbind,list(bmm,dmm,fmm))
 
 ##
-l38Basel = gam(land~s(t)+s(temp)+offset(leffort),data=subset(cc,lfa==38),family = 'nb')
+packageurl = "https://cran.r-project.org/src/contrib/Archive/ggeffects/ggeffects_1.3.4.tar.gz"
+
+install.packages(packageurl, repos=NULL, type="source")
+
+#turning conditional into marginal weighting by prop of total catch
+pr2 = ggpredict(l38a,terms=c('fYear','time[1:235]'),condition = c(leffort=0), back_transform = F)
+pr2tab = data.frame(fYear=pr2$x,predicted=pr2$predicted,Model='BD',se=pr2$std.error,time=pr2$group)
+
+#weighted by catch -- not what we are looking for
+# ind = aggregate(WEIGHT_KG~time+SYEAR,data=subset(aT,LFA ==38),FUN=sum)
+# ind1 = aggregate(WEIGHT_KG~SYEAR,data=subset(aT,LFA ==38),FUN=sum)
+# names(ind1)[2] = 'SumWt'
+# ind = merge(ind,ind1)
+# ind$prop = ind$WEIGHT_KG/ind$SumWt
+# ind$fYear=as.factor(ind$SYEAR)
+# ppr = merge(pr2ta,ind[,c('fYear','time','prop')])
+# ppr$wpre = ppr$predicted*ppr$prop
+# ppr$wvar = (ppr$se)^2*ppr$prop
+# p2 = aggregate(cbind(wpre,wvar)~fYear+Model,data=ppr,FUN=sum)
+# p2$wse = sqrt(p2$wvar)
+# 
+# pr3 = ggpredict(l38b,terms=c('fYear','time[1:235]'),condition = c(leffort=0))
+# pr3ta = data.frame(fYear=pr3$x,predicted=pr3$predicted,Model='BxD',se=pr3$std.error,time=pr3$group)
+# pp3r = merge(pr3ta,ind[,c('fYear','time','prop')])
+# pp3r$wpre = pp3r$predicted*pp3r$prop
+# pp3r$wvar = (pp3r$se)^2*pp3r$prop
+# p3 = aggregate(cbind(wpre,wvar)~fYear+Model,data=pp3r,FUN=sum)
+# p3$wse = sqrt(p3$wvar)
+# 
+# plot(as.numeric(as.character(pr1t$x)),pr1t$predicted,type='b',ylim=c(0,4))
+# lines(as.numeric(as.character(p2$fYear)),p2$wpre,type='b',col='red')
+# lines(as.numeric(as.character(p3$fYear)),p3$wpre,type='b',col='blue')
+
+##marginal weighted by effort
+
+ind = aggregate(NUM_OF_TRAPS~time+SYEAR,data=subset(aT,LFA ==38),FUN=sum)
+ind1 = aggregate(NUM_OF_TRAPS~SYEAR,data=subset(aT,LFA ==38),FUN=sum)
+names(ind1)[2] = 'SumTraps'
+ind = merge(ind,ind1)
+ind$prop = ind$NUM_OF_TRAPS/ind$SumTraps
+ind$fYear=as.factor(ind$SYEAR)
+ppr = merge(pr2ta,ind[,c('fYear','time','prop')])
+ppr$wpre = ppr$predicted*ppr$prop
+ppr$wvar = (ppr$se)^2*ppr$prop
+p2 = aggregate(cbind(wpre,wvar)~fYear+Model,data=ppr,FUN=sum)
+p2$wse = sqrt(p2$wvar)
+
+pr3 = ggpredict(l38b,terms=c('fYear','time[1:235]'),condition = c(leffort=0))
+pr3ta = data.frame(fYear=pr3$x,predicted=pr3$predicted,Model='BxD',se=pr3$std.error,time=pr3$group)
+pp3r = merge(pr3ta,ind[,c('fYear','time','prop')])
+pp3r$wpre = pp3r$predicted*pp3r$prop
+pp3r$wvar = (pp3r$se)^2*pp3r$prop
+p3 = aggregate(cbind(wpre,wvar)~fYear+Model,data=pp3r,FUN=sum)
+p3$wse = sqrt(p3$wvar)
+
+pr4 = ggpredict(l38c,terms=c('fYear','time[1:235]'),condition = c(leffort=0))
+pr4ta = data.frame(fYear=pr4$x,predicted=pr4$predicted,Model='BxDRL',se=pr4$std.error,time=pr4$group)
+pp4r = merge(pr4ta,ind[,c('fYear','time','prop')])
+pp4r$wpre = pp4r$predicted*pp4r$prop
+pp4r$wvar = (pp4r$se)^2*pp4r$prop
+p4 = aggregate(cbind(wpre,wvar)~fYear+Model,data=pp4r,FUN=sum)
+p4$wse = sqrt(p4$wvar)
+
+pr5 = ggpredict(l38d,terms=c('fYear','time[1:235]'),condition = c(leffort=0))
+pr5ta = data.frame(fYear=pr5$x,predicted=pr5$predicted,Model='BxDRV',se=pr5$std.error,time=pr5$group)
+pp5r = merge(pr5ta,ind[,c('fYear','time','prop')])
+pp5r$wpre = pp5r$predicted*pp5r$prop
+pp5r$wvar = (pp5r$se)^2*pp5r$prop
+p5 = aggregate(cbind(wpre,wvar)~fYear+Model,data=pp5r,FUN=sum)
+p5$wse = sqrt(p5$wvar)
 
 
-require(ggeffects)
-mydft <- ggpredict(l38cl, terms = c('t'),condition=c(leffort=0,fYear=2016)) #
-ggplot(mydft, aes(x = x, y = predicted)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1)+
-  xlab('Day of Season')+
-  ylab('CPUE')
 
-mydf <- ggpredict(l38cl, terms = c('t','fYear'),condition=c(leffort=0,temp=8)) #
-plot(mydf,color='bw', ci=F)
-ggplot(mydf, aes(x = x, y = predicted)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1)+
-  facet_wrap(~group)+
-  xlab('Day of Season')+
-  ylab('CPUE')
+p1 = pr1t
+names(p1)[c(1,2,6)] =c('fYear','wpre','wse')
 
-#residuals analysis
-bprd = ggpredict(l38Basel,terms=c('t'),condition=c(leffort=0,temp=8))
-bprdP = data.frame(baset = bprd$x,basepred = bprd$predicted)
+pS = rbind(p1[,c(1,2,3,6)],p2[,c(1,2,3,5)],p3[,c(1,2,3,5)],p4[,c(1,2,3,5)],p5[,c(1,2,3,5)])
+pS$Year = as.numeric(as.character(pS$fYear))
 
-mypred = data.frame(t=mydf$x,pred=mydf$predicted,yr=mydf$group)
-
-combData = merge(mypred,bprdP,by.x='t',by.y='baset')
-combData$res = combData$pred - combData$basepred
-
-ggplot(combData, aes(x = t, y = res)) +
-  geom_link2(aes(colour=after_stat(ifelse(y>0,'positive','negative'))),size=2,show.legend = F)+
-  facet_wrap(~yr)+
-  xlab('Day of Season')+
-  ylab('Residuals')+
-  labs(fill='Residual')+
-  geom_hline(yintercept=0,color='grey')
-
-xf = lobster.db('seasonal.landings')
-xf$yr = as.numeric(substr(xf$SYEAR,6,9))
-
-combDataL = merge(combData,xf[,c('yr','LFA38')])
-combDataL = combDataL[order(combDataL$LFA38,combDataL$t),]
-ggplot(combDataL, aes(x = t, y = res)) +
-  geom_link2(aes(colour=after_stat(ifelse(y>0,'positive','negative'))),size=2,show.legend = F)+
-  facet_wrap(~LFA38)+
-  xlab('Day of Season')+
-  ylab('Residuals')+
-  labs(fill='Residual')+
-  geom_hline(yintercept=0,color='grey')
+ggplot(pS, aes(x = Year, y = wpre ,colour=Model,fill=Model)) +
+  geom_line(linewidth=1) +
+  geom_errorbar(aes(ymin = wpre-wse, ymax = wpre+wse), width=0.2)+
+  #scale_color_discrete(begin = 0, end = 1, option = 'viridis')+
+  xlab('Year')+
+  ylab('Standardized CPUE')+
+  theme_test(base_size = 14)
 
 
-#what about temperatures for those years
-xxS = subset(xx,select=c(yr,temp,t))
 
-combDataLT = merge(combDataL,xxS)
-combDataLT = combDataLT[order(combDataLT$LFA38,combDataLT$t),]
-avgT = aggregate(temp~t,data=combDataLT,FUN=mean)
-names(avgT)[2] = 'avgT'
-combDataLTa = merge(combDataLT,avgT)
-combDataLTa$tempDiff = combDataLTa$temp-combDataLTa$avgT
+####cross valiation
+library(tidyverse)
+library(modelr)
+library(mgcv)
 
-ggplot(combDataLTa, aes(x = t, y = tempDiff)) +
-  geom_link2(aes(colour=after_stat(ifelse(y>0,'positive','negative'))),size=2,show.legend = F)+
-  facet_wrap(~LFA38)+
-  xlab('Day of Season')+
-  ylab('Temp Diffs')+
-  geom_hline(yintercept=0,color='grey')
+#100 samples
+cv_df = crossv_mc(subset(aT,LFA==38), 50) 
 
-##index 
-require(gratia)
-o = data_slice(l38P4,var1='fYear',offset=0)
-f  = fitted_values(l38P4,data=o,terms=c('(Intercept)','fYear'))
-ggplot(f,aes(x=fYear,y=fitted,group=1))+ geom_point()+ geom_errorbar(aes(ymin=lower,ymax=upper),width=.2)+stat_summary(fun.y=sum,geom='line')
+#names samples
+cv_df =
+  cv_df |> 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble))
 
+# run
+cv_res = 
+  cv_df |> 
+  mutate(
+    sim_mod  = map(train, \(df) mgcv::gam(WEIGHT_KG~fYear+offset(leffort),data=df,family = Gamma(link='log'))),
+    mod2  = map(train, \(df) mgcv::gam(WEIGHT_KG~fYear+s(time)+offset(leffort),data=df,family = Gamma(link='log'))), 
+    mod3  = map(train, \(df) mgcv:: gam(WEIGHT_KG~fYear+s(time,by=fYear)+offset(leffort),data=df,family = Gamma(link='log'))),
+    mod4  = map(train, \(df) mgcv:: gam(WEIGHT_KG~fYear+s(time,by=fYear)+s(rLID,bs='re')+offset(leffort),data=df,family = Gamma(link='log'))), 
+    mod5  = map(train, \(df) mgcv:: gam(WEIGHT_KG~fYear+s(time,by=fYear)+s(rV,bs='re')+offset(leffort),data=df,family = Gamma(link='log')))) |>
+   mutate(
+    rmse_M1 = map2_dbl(sim_mod, test, \(mod, df) rmse(model = mod, data = df)),
+    rmse_M2 = map2_dbl(mod2, test, \(mod, df) rmse(model = mod, data = df)),
+    rmse_M2 = map2_dbl(mod3, test, \(mod, df) rmse(model = mod, data = df)),
+    rmse_M2 = map2_dbl(mod4, test, \(mod, df) rmse(model = mod, data = df)),
+    rmse_M2 = map2_dbl(mod5, test, \(mod, df) rmse(model = mod, data = df)))
 
-################################################################
+#plot cv
+cv_res |> 
+  select(starts_with("rmse")) |> 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") |> 
+  mutate(model = fct_inorder(model)) |> 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
 
+####################################################
+#not current analysis fall 2023; held for posterity
+#####################################################
+# ##Part 1, raw CPUE
+# xx = subset(cc,lfa==38)
+# l38P1 = gam(land~fYear+offset(leffort),data=xx,family = 'nb') #best by AIC
+# pr1 = ggpredict(l38P1,terms='fYear',condition = c(leffort=0))
+# summary(l38P1)
+# AIC(l38P1)
+# 
+# plot(pr1)
+# 
+# ##Part 2, add in Day of Season
+# xx = subset(cc,lfa==38)
+# l38P2 = gam(land~fYear+s(t)+offset(leffort),data=xx,family = 'nb') #best by AIC
+# pr2 = ggpredict(l38P2,terms=c('t','fYear'),condition = c(leffort=0))
+# summary(l38P2)
+# AIC(l38P2)
+# ggplot(pr2, aes(x = x, y = predicted)) +
+#   geom_line() +
+#   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1)+
+#   facet_wrap(~group)+
+#   xlab('Day of Season')+
+#   ylab('CPUE')
+# 
+# ##Part 3, add in Day of Season and Temp
+# xx = subset(cc,lfa==38)
+# l38P3 = gam(land~fYear+s(t)+s(temp)+offset(leffort),data=xx,family = 'nb') #best by AIC
+# pr3 = ggpredict(l38P3,terms=c('t','fYear'),condition = c(leffort=0,temp=8))
+# summary(l38P3)
+# AIC(l38P3)
+# ggplot(pr3, aes(x = x, y = predicted)) +
+#   geom_line() +
+#   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1)+
+#   facet_wrap(~group)+
+#   xlab('Day of Season')+
+#   ylab('CPUE')
+# 
+# 
+# ##Part 4, add in Day of Season and Temp and interaction
+# xx = subset(cc,lfa==38)
+# l38P4 = gam(land~fYear+s(t)+s(temp)+s(t,by=fYear)+offset(leffort),data=xx,family = 'nb') #best by AIC
+# pr4 = ggpredict(l38P4,terms=c('t','fYear'),condition = c(leffort=0,temp=8))
+# summary(l38P4)
+# AIC(l38P4)
+# ggplot(pr4, aes(x = x, y = predicted)) +
+#   geom_line() +
+#   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1)+
+#   facet_wrap(~group)+
+#   xlab('Day of Season')+
+#   ylab('CPUE')
+# 
+# l38cl = gam(land~fYear+s(t)+s(temp)+s(t,by=fYear)+offset(leffort),data=subset(cc,lfa==38),family = 'nb') #best by AIC
+# 
+# 
+# ##
+# l38Basel = gam(land~s(t)+s(temp)+offset(leffort),data=subset(cc,lfa==38),family = 'nb')
+# 
+# 
+# require(ggeffects)
+# mydft <- ggpredict(l38cl, terms = c('t'),condition=c(leffort=0,fYear=2016)) #
+# ggplot(mydft, aes(x = x, y = predicted)) +
+#   geom_line() +
+#   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1)+
+#   xlab('Day of Season')+
+#   ylab('CPUE')
+# 
+# mydf <- ggpredict(l38cl, terms = c('t','fYear'),condition=c(leffort=0,temp=8)) #
+# plot(mydf,color='bw', ci=F)
+# ggplot(mydf, aes(x = x, y = predicted)) +
+#   geom_line() +
+#   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1)+
+#   facet_wrap(~group)+
+#   xlab('Day of Season')+
+#   ylab('CPUE')
+# 
+# #residuals analysis
+# bprd = ggpredict(l38Basel,terms=c('t'),condition=c(leffort=0,temp=8))
+# bprdP = data.frame(baset = bprd$x,basepred = bprd$predicted)
+# 
+# mypred = data.frame(t=mydf$x,pred=mydf$predicted,yr=mydf$group)
+# 
+# combData = merge(mypred,bprdP,by.x='t',by.y='baset')
+# combData$res = combData$pred - combData$basepred
+# 
+# ggplot(combData, aes(x = t, y = res)) +
+#   geom_link2(aes(colour=after_stat(ifelse(y>0,'positive','negative'))),size=2,show.legend = F)+
+#   facet_wrap(~yr)+
+#   xlab('Day of Season')+
+#   ylab('Residuals')+
+#   labs(fill='Residual')+
+#   geom_hline(yintercept=0,color='grey')
+# 
+# xf = lobster.db('seasonal.landings')
+# xf$yr = as.numeric(substr(xf$SYEAR,6,9))
+# 
+# combDataL = merge(combData,xf[,c('yr','LFA38')])
+# combDataL = combDataL[order(combDataL$LFA38,combDataL$t),]
+# ggplot(combDataL, aes(x = t, y = res)) +
+#   geom_link2(aes(colour=after_stat(ifelse(y>0,'positive','negative'))),size=2,show.legend = F)+
+#   facet_wrap(~LFA38)+
+#   xlab('Day of Season')+
+#   ylab('Residuals')+
+#   labs(fill='Residual')+
+#   geom_hline(yintercept=0,color='grey')
+# 
+# 
+# #what about temperatures for those years
+# xxS = subset(xx,select=c(yr,temp,t))
+# 
+# combDataLT = merge(combDataL,xxS)
+# combDataLT = combDataLT[order(combDataLT$LFA38,combDataLT$t),]
+# avgT = aggregate(temp~t,data=combDataLT,FUN=mean)
+# names(avgT)[2] = 'avgT'
+# combDataLTa = merge(combDataLT,avgT)
+# combDataLTa$tempDiff = combDataLTa$temp-combDataLTa$avgT
+# 
+# ggplot(combDataLTa, aes(x = t, y = tempDiff)) +
+#   geom_link2(aes(colour=after_stat(ifelse(y>0,'positive','negative'))),size=2,show.legend = F)+
+#   facet_wrap(~LFA38)+
+#   xlab('Day of Season')+
+#   ylab('Temp Diffs')+
+#   geom_hline(yintercept=0,color='grey')
+# 
+# ##index 
+# require(gratia)
+# o = data_slice(l38P4,var1='fYear',offset=0)
+# f  = fitted_values(l38P4,data=o,terms=c('(Intercept)','fYear'))
+# ggplot(f,aes(x=fYear,y=fitted,group=1))+ geom_point()+ geom_errorbar(aes(ymin=lower,ymax=upper),width=.2)+stat_summary(fun.y=sum,geom='line')
 
-#now full model including all lic holders
-x = subset(aT,LFA==38)
-x$fYear = as.factor(x$SYEAR)
-x$leffort = log(x$NUM_OF_TRAPS)
-l38L = gam(TOTAL_WEIGHT_KG~fYear+s(DOS)+s(temp)+s(DOS,by=fYear)+offset(leffort),data=x,family = 'nb') #best by AIC
-pr4 = ggpredict(l38L,terms=c('DOS','fYear'),condition = c(leffort=0,temp=8))
-summary(l38P4)
-AIC(l38P4)
-ggplot(pr4, aes(x = x, y = predicted)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1)+
-  facet_wrap(~group)+
-  xlab('Day of Season')+
-  ylab('CPUE')
-
-pr4 = ggpredict(l38L,terms=c('temp'))
-plot(pr4)
-
-
-require(gratia)
-o1 = data_slice(l38L,var1='fYear',offset=0)
-f1  = fitted_values(l38L,data=o1,terms=c('(Intercept)','fYear'))
-ggplot(f1,aes(x=fYear,y=fitted,group=1))+ geom_point()+ geom_errorbar(aes(ymin=lower,ymax=upper),width=.2)+stat_summary(fun.y=sum,geom='line')
-
-
-#random licence effect
-x$rLID = as.factor(x$LICENCE_ID)
-l38rL = gam(TOTAL_WEIGHT_KG~fYear+s(DOS)+s(temp)+s(DOS,by=fYear)+s(rLID,bs='re')+offset(leffort),data=x,family = 'nb') #best by AIC
-o1r = data_slice(l38rL,var1='fYear',offset=0)
-f1r  = fitted_values(l38rL,data=o1r,terms=c('(Intercept)','fYear'))
-ggplot(f1r,aes(x=fYear,y=fitted,group=1))+ geom_point()+ geom_errorbar(aes(ymin=lower,ymax=upper),width=.2)+stat_summary(fun.y=sum,geom='line')
-
-
-###
-
-##
-
+############################
+#spatial
 
 aa = subset(aT,SYEAR>2005 & SYEAR<2023)
 xx = split(aa,f=aa$SYEAR)

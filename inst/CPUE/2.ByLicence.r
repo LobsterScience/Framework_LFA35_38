@@ -1,12 +1,14 @@
-##run 1.LogbookData.r
+##run 0.Setup.r
 
 require(bio.lobster)
 require(bio.utilities)
 require(dplyr)
 require(devtools)
 require(sf)
-require(ggplot)
+require(ggplot2)
 fp = file.path(outdir,'CPUE','CPUETempDepth.rds')
+te1z = readRDS(file.path(outdir,'CPUE','envtVarsbyGrid.rds'))
+
 aL = readRDS(fp)
 
 
@@ -61,11 +63,11 @@ for(i in 1:length(out)){
   xV = length(unique(x$VR_NUMBER))
   xS = aggregate(Trips~SYEAR+VR_NUMBER+SUBMITTER_NAME, data=x,FUN= sum)
   xL =  subset(o,Licence_Id==unique(x$LICENCE_ID))
-  if(nrow(xL)>0) {if(length(grep(xL$Name_Last_First, o$Name_Last_First))>1)  browser()} #if name has 2 lics
+#  if(nrow(xL)>0) {if(length(grep(xL$Name_Last_First, o$Name_Last_First))>1)  browser()} #if name has 2 lics
   x1 = merge(x,te1z, by.x=c('GRID_NUM','DATE_FISHED'),by.y=c('grid','date'))
 }
 
-
+saveRDS(x1,file=file.path(outdir,'Catch_by_lic_grid.rds'))
 
 #Logbook Processing
 a$DYR = lubridate::decimal_date(a$DATE_FISHED) - lubridate::year(a$DATE_FISHED)
