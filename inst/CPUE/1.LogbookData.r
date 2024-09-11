@@ -7,7 +7,7 @@ require(devtools)
 require(sf)
 require(ggplot2)
 
-a = lobster.db('process.logs.unfiltered')
+a = lobster.db('process.logs')
 
 a = subset(a,LFA %in% c(34,35,36,38))
 a = as_tibble(a)
@@ -69,23 +69,3 @@ dir.create(file.path(outdir,'CPUE'))
 saveRDS(aT,file.path(outdir,'CPUE','CPUETempDepth.rds'))
 saveRDS(te1z,file.path(outdir,'CPUE','envtVarsbyGrid.rds'))
 
-##############
-#characteristics
-###
-b = lobster.db('community_code')
-d = lobster.db('vessels.by.port')
-d = na.zero(d)
-d1 = aggregate(cbind(GROSS_TONNAGE, BHP, LOA, BREADTH, DEPTH,YEAR_BUILT)~VR_NUMBER+LFA+YR_FISHED,data=d,FUN=min)
-d = na.zero(d1)
-w = lobster.db('port')
-v = lobster.db('port_location')
-
-#Demographics on Lic
-o = read.csv(file.path(project.datadirectory('bio.lobster'),'data','LicenceHolder','LicenceHolderInfo2022a.csv'))
-i = grep('X',names(o))
-
-o = subset(o,Years_Licence_Held<100)
-o$LFA = do.call(rbind, strsplit(o$Desc_Eng," - "))[,2]
-o$LicStartDate = as.Date(o$Licence_Participant_Start_Date,'%b %d, %Y')
-o$BDate = as.Date(o$Birthdate,'%b %d, %Y')
-o = subset(o,select=c(Licence_Id, Name_Last_First, BDate, LicStartDate, LFA, Years_Licence_Held, Age))
