@@ -37,7 +37,7 @@ xs$rYR=cut(xs$YEAR,breaks=br,labels=lab,include.lowest = T,include.highest=F)
 #to check
 aggregate(YEAR~rYR,data=xs,FUN=function(x)c(min(x),max(x)))
 
-ggLobsterMap('34-38',addGrids = F,addPoints = T,pts=subset(xs),fw='~rYR')+theme_test(base_size=14)
+ggLobsterMap('34-38',addGrids = F,addPoints = T,pts=subset(xs))+theme_test(base_size=14)
 # 
 # 
 # 
@@ -108,13 +108,13 @@ survey$CommN = survey$SA_CORRECTED_PRORATED_N
 pt = subset(survey,YEAR==1996 )
 pt$YEAR='1995-2012'
 ggLobsterMap('34-38',addGrids = F,addPoints = T,pts=subset(pt),fw='~YEAR')
-ggLobsterMap('34-38',addGrids = F,addPoints = T,pts=subset(survey,YEAR %in% 2013:2023 ),fw='~YEAR')
+ggLobsterMap('34-38',addGrids = F,addPoints = T,pts=subset(survey,YEAR %in% 2013:2023 ))
 
 
-yp = ILTS_ITQ_All_Data(redo_base_data = F,size=c(0,300),aggregate=F,species=2550,biomass = F)
-yp1 = subset(yp, month(SET_DATE) %in% 6:8)
+yp = ILTS_ITQ_All_Data(redo_base_data = F,size=c(0,300),aggregate=F,species=2550,biomass = F,extend_ts = F)
+yp1 = subset(yp, month(SET_DATE) %in% 6:8 & YEAR<2024 & YEAR>2012)
 
-yp1 = aggregate(SA_CORRECTED_PRORATED_N~YEAR+LFA+FISH_LENGTH,data=yp1,FUN=mean)
+yp1 = aggregate(SA_CORRECTED_PRORATED_N~YEAR+FISH_LENGTH,data=yp1,FUN=mean)
 ggplot(yp1,aes(x=FISH_LENGTH,y=SA_CORRECTED_PRORATED_N))+geom_bar(stat='identity')+facet_wrap(~YEAR)+xlab('Carapace Length')+ylab('Density') +theme_test(base_size = 14)+geom_vline(xintercept = 82.5,color='red')
 
 
@@ -133,7 +133,7 @@ survey$YEAR = year(survey$SET_DATE)
 survey = subset(y, month(SET_DATE) >8 & YEAR>2014)
 survey = st_as_sf(survey,coords = c('SET_LONG','SET_LAT'),crs=4326)
 survey$CommN = survey$SA_CORRECTED_PRORATED_N
-ggLobsterMap('34-38',addGrids = F,addPoints = T,pts=subset(survey,YEAR %in% 2013:2023 &Survey=='ILTS'),fw='~YEAR')
+ggLobsterMap('34-38',addGrids = F,addPoints = T,pts=subset(survey,YEAR %in% 2019:2023 ),fw='~YEAR')
 
 
 ###############################################################################################################################
@@ -170,7 +170,7 @@ xle = n %>% pivot_longer(starts_with('P'))
 xle$Length = as.numeric(substr(xle$name,3,8))
 #xle= na.zero(xle,cols='value')
 xxa = aggregate(value~Length+YEAR,data=xle,FUN=mean)
-ggplot(subset(xxa, YEAR %in% c(1969,1975,1983,1991,1999,2007,2012,2015,2023)),aes(x=Length,y=value))+geom_bar(stat='identity')+facet_wrap(~YEAR)+xlab('Carapace Length')+ylab('Density') +theme_test(base_size = 14)+geom_vline(xintercept = 82.5,color='red')
+ggplot(subset(xxa, YEAR %in% floor(seq(min(xxa$YEAR),max(xxa$YEAR),length=12))),aes(x=Length,y=value))+geom_bar(stat='identity')+facet_wrap(~YEAR,scales='free_y')+xlab('Carapace Length')+ylab('Density') +theme_test(base_size = 14)+geom_vline(xintercept = 82.5,color='red')
 
 br = round(seq(min(ns$YEAR),max(ns$YEAR),length=9))
 lab = c(paste(br[1],br[2],sep="-"),paste(br[2]+1,br[3],sep="-"),paste(br[3]+1,br[4],sep="-"),paste(br[4]+1,br[5],sep="-"),paste(br[5]+1,br[6],sep="-"),paste(br[6]+1,br[7],sep="-"),paste(br[7]+1,br[8],sep="-"),paste(br[8]+1,br[9],sep="-"))

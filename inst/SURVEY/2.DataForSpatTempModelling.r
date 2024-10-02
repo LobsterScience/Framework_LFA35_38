@@ -15,7 +15,7 @@ la()
 fd=file.path(project.datadirectory('Framework_LFA35_38'),'outputs','SURVEYS')
 setwd(fd)
 crs_utm20 <- 32620
-
+sf_use_s2(FALSE) #needed for cropping
 
 ###data in
 
@@ -92,7 +92,7 @@ survey = subset(survey,!is.na(Legal_wt))
 #survey$Legal_wt[which(survey$Legal_wt>i)]=i #windsorize extreme catches
 
 
-saveRDS(list(survey,ns_coast,bathy,LFApolys),file='full_package_survey_coast_bathy_LFApolys_Sept13.rds')
+saveRDS(list(survey,ns_coast,bathy,LFApolys),file='full_package_survey_coast_bathy_LFApolys_Sept24.rds')
 
 #################################################################################################################
 ####Fall
@@ -143,45 +143,134 @@ survey$z_dist = as.numeric(ds)
 
 
 
-saveRDS(survey,file='fall_survey_data_all_commBio_Sept13.rds')
+saveRDS(survey,file='fall_survey_data_all_commBio_Sept25.rds')
 
 
 #################################################################################################################
 ####summer recruit N and commercial N along with fall commercial N for the full model
-
+la()
+#summer
 y = ILTS_ITQ_All_Data(redo_base_data = F,size=c(70,300),aggregate=T,species=2550,biomass = F)
 y = subset(y,month(SET_DATE)<8)
-y$Survey='ILTS'
+y$Survey='ILTS_Summer'
+y$id = paste(y$TRIP_ID,y$SET_NO,sep="-")
+y = subset(y,select=c(id,YEAR,SET_LONG,SET_LAT,SA_CORRECTED_PRORATED_N,Survey))
 
 x = RV_sets()
 x = subset(x,month(DATE) %in% 6:8)
-x$RecComm = x$Recruit+x$Legal
-x = subset(x,select=c(mission,setno,LONGITUDE,LATITUDE,DATE,RecComm))
-x$Survey = 'RV'
+x$N = x$Recruit+x$Legal
+x$id = paste(x$mission,x$setno,sep="-")
+x = subset(x,select=c(id,YEAR,LONGITUDE,LATITUDE,N))
+x$LONGITUDE = ifelse(x$LONGITUDE>0,x$LONGITUDE*-1,x$LONGITUDE )
+x$Survey = 'RV_Summer'
 
-#saveRDS(list(y,ns_coast,bathy,LFApolys),file='full_package_survey_coast_bathy_LFApolys_autumn_Sept13.rds')
+names(y) = names(x)
+suC = st_as_sf(rbind(y,x),coords=c('LONGITUDE','LATITUDE'),crs=4326)
 
+#fall
+
+      z = lobster.db('DMR.redo')
+      z$N = z$Comm
+      z$YEAR = z$Year
+      z = subset(z,select=c(id,YEAR,N))
+      z$Survey = 'MNH_Fall'
+      
+      ###NEFSC
+      
+      n = NEFSC_sets()
+      n = subset(n,month(DATE)>8 & LONGITUDE> -68 & LATITUDE>42)
+      n$N = (n$Legal)/n$OFFSET
+      n$id = paste(n$MISSION,n$SETNO,sep="-")
+      n = subset(n,select=c(id,YEAR,LONGITUDE,LATITUDE,N))
+      n$Survey = 'NEFSC_Fall'
+      n = st_as_sf(n,coords=c('LONGITUDE','LATITUDE'),crs=4326)
+
+      #ILTS
+      y = ILTS_ITQ_All_Data(redo_base_data = F,size=c(82,300),aggregate=T,species=2550,biomass = F)
+      y = subset(y,month(SET_DATE)>8 & LFA %ni% 'L34')    
+      y$id = paste(y$TRIP_ID,y$SET_NO,sep="-")
+      y$Survey = 'ILTS_Fall'
+      y = subset(y,select=c(id,YEAR,SET_LONG,SET_LAT,SA_CORRECTED_PRORATED_N,Survey))
+      
+      ys = st_as_sf(y,coords=c('SET_LONG','SET_LAT'),crs=4326)
+      ys$N = ys$SA_CORRECTED_PRORATED_N
+      ys = subset(ys,select=c(id,YEAR,N,Survey))
+
+      suCF =do.call(rbind,list(z,n,ys))
+      
+combSUFall = do.call('rbind',list(suC,suCF))
+
+ggplot(combSUFall,aes(colour=Survey))+geom_sf()
+
+combSUFall = st_transform(combSUFall,crs_utm20)
+
+surv_utm_coords = st_coordinates(combSUFall)
+combSUFall$X1000 <- surv_utm_coords[,1] /1000
+combSUFall$Y1000 <- surv_utm_coords[,2] /1000
+st_geometry(combSUFall) <- NULL
+survey = st_as_sf(combSUFall,coords = c('X1000','Y1000'),crs=crs_utm20)
+
+sf_use_s2(FALSE) #needed for cropping
+#survey and depth from poly
+ss = st_nearest_feature(survey,ba)
+ds = st_distance(survey,ba[ss,],by_element=T)
+st_geometry(ba) = NULL
+survey$z = ba$z[ss]
+survey$z_dist = as.numeric(ds)
+
+saveRDS(survey,file='summer_fall_survey_data_all_N_Sept24.rds')
+
+#################################################################################################################
+#####fall recruits for the next year
 
 z = lobster.db('DMR.redo')
-z$RecComm = z$Rec+z$Comm
-z = subset(z,select=c(id,Year,RecComm))
-z$Survey = 'MNH'
+z$N = z$Rec
+z$YEAR = z$Year
+z = subset(z,select=c(id,YEAR,N))
+z$Survey = 'MNH_Fall'
 
 ###NEFSC
 
 n = NEFSC_sets()
 n = subset(n,month(DATE)>8 & LONGITUDE> -68 & LATITUDE>42)
-ns = st_as_sf(n,coords=c('LONGITUDE','LATITUDE'),crs=4326)
-ns$Legal_wt = ns$Legal_wt/ns$OFFSET
-ns$id = paste(ns$MISSION,ns$SETNO,sep="-")
-ggplot(ns)+geom_sf()+geom_sf(data=ns_coast,fill='black')+geom_sf(data=z,colour='red')+geom_sf(data=ys,colour='blue')
+n$N = (n$Rec)/n$OFFSET
+n$id = paste(n$MISSION,n$SETNO,sep="-")
+n = subset(n,select=c(id,YEAR,LONGITUDE,LATITUDE,N))
+n$Survey = 'NEFSC_Fall'
+n = st_as_sf(n,coords=c('LONGITUDE','LATITUDE'),crs=4326)
 
-ns = subset(ns,select=c(id,YEAR,Legal_wt))
-names(ns)[2:3] = c('Year','Commwt')
-ns$Survey = 'NEFSC'
+#ILTS
+y = ILTS_ITQ_All_Data(redo_base_data = F,size=c(70,82),aggregate=T,species=2550,biomass = F,extend_ts = F)
+y = subset(y,month(SET_DATE)>8 & LFA %ni% 'L34')    
+y$id = paste(y$TRIP_ID,y$SET_NO,sep="-")
+y$Survey = 'ILTS_Fall'
+y = subset(y,select=c(id,YEAR,SET_LONG,SET_LAT,SA_CORRECTED_PRORATED_N,Survey))
 
-combFall = do.call('rbind',list(ys,z,ns))
+ys = st_as_sf(y,coords=c('SET_LONG','SET_LAT'),crs=4326)
+ys$N = ys$SA_CORRECTED_PRORATED_N
+ys = subset(ys,select=c(id,YEAR,N,Survey))
 
-saveRDS(combFall,file='fall_survey_data_all_commBio_Sept13.rds')
+combSUFall =do.call(rbind,list(z,n,ys))
+
+
+ggplot(combSUFall,aes(colour=Survey))+geom_sf()
+
+combSUFall = st_transform(combSUFall,crs_utm20)
+
+surv_utm_coords = st_coordinates(combSUFall)
+combSUFall$X1000 <- surv_utm_coords[,1] /1000
+combSUFall$Y1000 <- surv_utm_coords[,2] /1000
+st_geometry(combSUFall) <- NULL
+survey = st_as_sf(combSUFall,coords = c('X1000','Y1000'),crs=crs_utm20)
+
+sf_use_s2(FALSE) #needed for cropping
+#survey and depth from poly
+ss = st_nearest_feature(survey,ba)
+ds = st_distance(survey,ba[ss,],by_element=T)
+st_geometry(ba) = NULL
+survey$z = ba$z[ss]
+survey$z_dist = as.numeric(ds)
+
+saveRDS(survey,file='fall_survey_data_rec_N_Sept16.rds')
 
 
