@@ -187,25 +187,26 @@ h <- h %>%
   mutate(SYEAR = ifelse(is.na(SYEAR), "2024-2025", SYEAR))
 h <- h %>%
   filter(SYEAR >= "2005-2006" & SYEAR <= "2024-2025")
-h$SYEAR=2006:2025
+h$SYEAR <- sub("-.*", "", h$SYEAR)
+h$SYEAR <- as.numeric(h$SYEAR)
 
 land38B<-ggplot(h, aes(x = SYEAR)) +
-  geom_bar(aes(y = LFA38B, fill = ifelse(SYEAR == 2025, "2025", "Other")), 
+  geom_bar(aes(y = LFA38B, fill = ifelse(SYEAR == 2024, "2024", "Other")), 
            stat = "identity", width = 0.75) +
   labs(x = "Season Year", y = "Landings (t)") +
   
   scale_y_continuous(
     limits = c(0, 1000),
     expand = c(0, 0))+
-  scale_x_continuous(breaks = seq(2005, 2025, by = 3), expand = c(0.01, 0)) + 
-  scale_fill_manual(values = c("2025" = "#f1605d", "Other" = "#000004")) + 
-  scale_color_manual(values = c("2025" = "#f1605d", "Other" = "#000004")) + 
+  scale_x_continuous(breaks = seq(2005, 2024, by = 2), expand = c(0.01, 0)) + 
+  scale_fill_manual(values = c("2024" = "#f1605d", "Other" = "#000004")) + 
+  scale_color_manual(values = c("2024" = "#f1605d", "Other" = "#000004")) + 
   guides(fill = "none", color = "none") 
 
 ggsave(filename = "landings38.png", plot = land38, path = "C:/Users/HowseVJ/OneDrive - DFO-MPO/LFA 35-38 Framework Resources/Figures", width = 8, height = 6, units = "in", dpi = 300)
 
 ### Landings Descriptions 10 year
-subsamp<-h[h$SYEAR >2014 & h$SYEAR <2025,]
+subsamp<-h[h$SYEAR >2013 & h$SYEAR <2023,]
 range(subsamp$LFA38B)
 median(subsamp$LFA38B)
 
