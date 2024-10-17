@@ -38,7 +38,7 @@ plot(strata)
     lobster.db('scallop')
     size_range=c(70,82)
     sex=0:3
-    lfa = 38             ###### PICK THE LFA  
+    lfa = 36            ###### PICK THE LFA  
     layerDir=file.path(project.datadirectory("bio.lobster"), "data","maps")
     return_sets_object=F
     
