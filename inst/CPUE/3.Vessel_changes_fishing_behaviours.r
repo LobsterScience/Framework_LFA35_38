@@ -169,7 +169,7 @@ ggplot(xx,aes(x=SYEAR,y=Pc[,2],ymin=Pc[,1],ymax=Pc[,3]))+geom_point()+geom_error
 xg = merge(xp,xx)
 
 ggplot(xg,aes(x=Pc[,2],y=Pp[,2],label=SYEAR))+geom_point()+geom_path()+facet_wrap(~LFA)+
-  xlab('CPUE')+ylab('Number of Trips / Season Length')+geom_text(data=subset(xg,SYEAR %in% c(2006,2023)),aes(label=SYEAR,x=Pc[,2],y=Pp[,2]))+theme_test()
+  xlab('CPUE')+ylab('Number of Trips / Season Length')+geom_text(data=subset(xg,SYEAR %in% c(2006,2023)),aes(label=SYEAR,x=Pc[,2],y=Pp[,2])))+theme_test()
 
 
 
@@ -289,8 +289,6 @@ sp$woy = lubridate::week(sp$Date)
 
 sp = aggregate(PRICE~woy+LFA+SYEAR,data=sp,FUN=median)
 ggplot(subset(sp,SYEAR>2006 & LFA %in% c(35,36,38)),aes(woy,PRICE, group=LFA,colour=LFA))+geom_path()+facet_wrap(~SYEAR)+theme_test()
-
-
 a$woy = lubridate::week(a$DATE_FISHED)
 
 asp = merge(a,sp)
@@ -374,7 +372,55 @@ x1a$YR = as.numeric(x1a$SYEAR)
 x1a$YR1 = x1a$YR+x1a$prop
 
 
+#######################################################
+######################
 
+
+####timing of landings
+a = lobster.db('process.logs')
+a = subset(a, LFA %in% c( 35,36,38) & SYEAR <2024 & SYEAR>2005)
+
+x1 = aggregate(WEIGHT_KG~SYEAR+LICENCE_ID+LFA+WOS,data=subset(a,WEIGHT_KG>0 & NUM_OF_TRAPS>0),FUN=sum)
+x1$P=x1$WEIGHT_KG
+
+x1a = aggregate(P~SYEAR+LFA+WOS,data=x1,FUN=sum)
+
+xxx = split(x1a,f=list(x1a$LFA,x1a$SYEAR))
+junk = list()
+ju=list()
+
+for(i in 1:length(xxx)){
+  o = xxx[[i]]
+  o$prp = cumsum(o$P) / sum(o$P)
+  junk[[i]] = o  
+  ju[[i]] = data.frame(yr = unique(o$SYEAR),LFA=unique(o$LFA),L50 = o$WOS[which.min(abs(o$prp-.5))])
+}
+x1a = do.call(rbind,junk)
+x1a$Fishing_Season =x1a$SYEAR
+ggplot(x1a,aes(x=WOS,y=prp,group=Fishing_Season,colour=Fishing_Season))+scale_colour_viridis_c(option='inferno')+geom_line()+facet_wrap(~LFA)+xlab('Week of Season')+ylab('Proportion of Total Landings')+theme_test(base_size = 14)
+
+###week of season to 50% landings
+x1aa = do.call(rbind,ju)
+x1aa$Fishing_Season =x1aa$SYEAR
+ggplot(x1aa,aes(x=yr,y=L50))+scale_colour_viridis_c(option='inferno')+geom_line()+facet_wrap(~LFA)+xlab('Fishing Season')+ylab('Week of Season to 50%')+theme_test(base_size = 14)
+
+
+
+x1aa = aggregate(P~LFA,data=x1a,FUN=max)
+names(x1aa)[2]='Pmax'
+x1a = merge(x1a,x1aa)
+x1a$prop = x1a$P/x1a$Pmax
+
+x1a$YR = as.numeric(x1a$SYEAR)
+x1a$YR1 = x1a$YR+x1a$prop
+
+
+
+
+
+
+
+#############################################
 
 #expand
 lfa = c(35,36,38)
@@ -406,3 +452,105 @@ lan$LFA = substr(lan$name,4,6)
 v = merge(cpu,lan)
 
 ggplot(v,aes(x=unBCPUE,y=value))+geom_point()+geom_path()+facet_wrap(~LFA)
+
+############fuel
+
+
+x = read.csv(file.path(project.datadirectory('bio.lobster'),'data','EconomicData','fuelData.csv'))
+xx = subset(x, GEO=='Halifax, Nova Scotia' & Type.of.fuel=="Diesel fuel at full service filling stations")
+xx$date = as.Date(paste(xx$REF_DATE,'14',sep="-"), '%Y-%m-%d')
+
+xy = subset(x, GEO=='Halifax, Nova Scotia' & Type.of.fuel=="Diesel fuel at self service filling stations")
+xy$date = as.Date(paste(xy$REF_DATE,'14',sep="-"), '%Y-%m-%d')
+
+xx = rbind(xx[,c('date','VALUE')],xy[,c('date','VALUE')])
+
+plot(xx$date,xx$VALUE,xlim=c(min(xx$date),max(xy$date)),ylim=c(min(xx$VALUE),max(xy$VALUE)))
+points(xy$date,xy$VALUE,col='red')
+
+
+
+p = lobster.db('process.logs')
+p = subset(p,LFA %in% c(35,36,38))
+p$mn = month(p$DATE_FISHED)
+p$d = mday(p$DATE_FISHED)
+p$mergeDate = as.Date(paste(year(p$DATE_FISHED),month(p$DATE_FISHED),14,sep="-"))
+pp = merge(p,xx,by.x='mergeDate',by.y='date')
+
+sp = lobster.db('process_slips')
+sp$woy = lubridate::week(sp$Date)
+
+#seasonal price
+sp$value*sp$WT_LBS
+wtPri =aggregate(cbind(value,WT_LBS)~LFA+SYEAR,data=sp,FUN=sum)
+wtPri$mnV = wtPri$value/wtPri$WT_LBS
+
+ggplot(subset(wtPri,LFA %in% c(35,36,38) & SYEAR>2003 & SYEAR < 2024),aes(SYEAR,mnV))+geom_point()+geom_path()+facet_wrap(~LFA)+labs(x='Fishing Season',y='Weighted Price per lb')
+
+
+sp = aggregate(PRICE~woy+LFA+SYEAR,data=sp,FUN=median)
+#ggplot(subset(sp,SYEAR>2006 & LFA %in% c(35,36,38)),aes(woy,PRICE, group=LFA,colour=LFA))+geom_path()+facet_wrap(~SYEAR)+theme_test()
+pp$woy = lubridate::week(pp$DATE_FISHED)
+
+asp = merge(pp,sp)
+
+asp$valuePerTrip = asp$PRICE*asp$WEIGHT_KG*2.20462
+
+asp = subset(asp,SYEAR<2024)
+oo = aggregate(valuePerTrip~LFA+SYEAR,data=asp,FUN=function(x) quantile(x,probs=c(0.25,.5,.75)))
+oa = aggregate(VALUE~LFA+SYEAR,data=asp,FUN=function(x) quantile(x,probs=c(.5)))
+
+ggplot(oo,aes(x=SYEAR,y=valuePerTrip[,2],ymin=valuePerTrip[,1],ymax=valuePerTrip[,3]))+geom_point()+geom_errorbar(width=0)+facet_wrap(~LFA)+
+  xlab('Fishing Season')+ylab('Value Per Trip')+theme_test(base_size = 14)
+
+o5 = subset(oo,LFA==35)
+a5 = subset(oa,LFA==35)
+
+oa = merge(oo,oa)
+#ggplot(oa,aes(x=VALUE,y=valuePerTrip[,2]))+geom_point()+geom_path()+geom_text(data=subset(oa,yr %in% c(min(yr),max(yr))),aes(label=yr,x=wMM,y=rMM),position = position_nudge(y=c(-.023,.023)))+
+#  facet_wrap(~LFA)
+
+
+scaleright = max(a5$VALUE)/max(o5$valuePerTrip[,2])
+g1 = ggplot(data = o5,aes(x=SYEAR,y=valuePerTrip[,2]))+geom_point() +geom_path(lwd=1.2)+
+  geom_point(data=a5,aes(x=SYEAR,y=VALUE/scaleright),colour='grey66')+
+  geom_line(data=a5,aes(x=SYEAR,y=VALUE/scaleright),colour='black',lwd=1.2,linetype='dotted')+
+  
+  scale_y_continuous(name='Value Per Trip', sec.axis= sec_axis(~.*scaleright, name= 'Mean Fuel Price Per Trip',breaks = seq(0,max(a5$VALUE),length=6)))+
+  labs(x = "Year") 
+
+
+o6 = subset(oo,LFA==36)
+a6 = subset(oa,LFA==36)
+
+scaleright = max(a6$VALUE)/max(o6$valuePerTrip[-1,2])
+g2 = ggplot(data = subset(o6,SYEAR>2004),aes(x=SYEAR,y=valuePerTrip[,2]))+geom_point() +geom_path(lwd=1.2)+
+  geom_line(data=a6,aes(x=SYEAR,y=VALUE/scaleright),colour='black',lwd=1.2,linetype='dotted')+
+  
+  scale_y_continuous(name='Value Per Trip', sec.axis= sec_axis(~.*scaleright, name= 'Mean Fuel Price Per Trip',breaks = seq(0,max(a6$VALUE),length=6)))+
+  labs(x = "Year") 
+
+o8 = subset(oo,LFA==38)
+a8 = subset(oa,LFA==38)
+
+scaleright = max(a8$VALUE)/max(o8$valuePerTrip[,2])
+g3 = ggplot(data = subset(o8,SYEAR>2004),aes(x=SYEAR,y=valuePerTrip[,2]))+geom_point() +geom_path(lwd=1.2)+
+  geom_line(data=a8,aes(x=SYEAR,y=VALUE/scaleright),colour='black',lwd=1.2,linetype='dotted')+
+  
+  scale_y_continuous(name='Value Per Trip', sec.axis= sec_axis(~.*scaleright, name= 'Mean Fuel Price Per Trip',breaks = seq(0,max(a8$VALUE),length=6)))+
+  labs(x = "Year") 
+
+ggpubr::ggarrange(g1,g2,g3,labels=c('A','B','C'))
+
+
+ple = aggregate(cbind(NUM_OF_TRAPS,WEIGHT_KG,TotalV)~SYEAR+LFA+LICENCE_ID,data=asp,FUN=sum)
+plm = aggregate(VALUE~SYEAR+LFA+LICENCE_ID,data=asp,FUN=mean)
+
+
+sp = aggregate(PRICE~woy+LFA+SYEAR,data=sp,FUN=median)
+ggplot(subset(sp,SYEAR>2006 & LFA %in% c(35,36,38)),aes(woy,PRICE, group=LFA,colour=LFA))+geom_path()+facet_wrap(~SYEAR)+theme_test()
+a$woy = lubridate::week(a$DATE_FISHED)
+
+asp = merge(a,sp)
+asp$valuePerTrip = asp$WEIGHT_KG*2.20462*(asp$PRICE)
+asp$valuePerTrap = asp$WEIGHT_KG*2.20462*(asp$PRICE)/asp$NUM_OF_TRAPS

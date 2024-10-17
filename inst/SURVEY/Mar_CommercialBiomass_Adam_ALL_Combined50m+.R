@@ -164,21 +164,21 @@ f$ILTS_Fall <- f$MNH_Fall <- f$MNH_NEFSC_Fall <- 0
 
 #g = predict(model,newdata=f,return_tmb_object = T)
 
-f34 = subset(f,LFA==35)
+f34 = subset(f,LFA==35 &z>=50)
 g34 = predict(model,newdata=f34,return_tmb_object = T)
-ind35 = get_index(g34,bias_correct = T)
-g5 = ggplot(subset(ind35,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000) ')
+ind35g50 = get_index(g34,bias_correct = T)
+g5 = ggplot(subset(ind35g50,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000) ')
 
-f34 = subset(f,LFA==36)
+f34 = subset(f,LFA==36 & z>=50)
 g34 = predict(model,newdata=f34,return_tmb_object = T)
-ind36 = get_index(g34,bias_correct = T)
-g6 = ggplot(subset(ind36,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
+ind36g50 = get_index(g34,bias_correct = T)
+g6 = ggplot(subset(ind36g50,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
 
 
-f3538 = subset(f,LFA %in% 38)
+f3538 = subset(f,LFA %in% 38 & z>=50)
 g3538 = predict(model,newdata=f3538,return_tmb_object = T)
-ind38 = get_index(g3538,bias_correct = T)
-g8 = ggplot(subset(ind38,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
+ind38g50 = get_index(g3538,bias_correct = T)
+g8 = ggplot(subset(ind38g50,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
 
 
 saveRDS(list(ind35,ind36,ind38),'IndicesFromFullComboModelSept26.rds')

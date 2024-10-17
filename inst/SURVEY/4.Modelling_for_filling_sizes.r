@@ -149,7 +149,7 @@ ff$Y1000 = st_coordinates(ff)[,2]
 ff$lz=log(ff$z)
 fa = as_tibble(ff)
 g = predict(fit_bino3,newdata = fa)
-ff$Modelled_Proportion = fit_bino$family$linkinv(g$est)
+ff$Modelled_Proportion = fit_bino3$family$linkinv(g$est)
 
 
 

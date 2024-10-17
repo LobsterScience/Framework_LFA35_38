@@ -62,6 +62,7 @@ survey$X1000 <- surv_utm_coords[,1]
 survey$Y1000 <- surv_utm_coords[,2] 
 survey = subset(survey,!is.na(N))
 
+survey = subset(survey,YEAR>1999)
 
 
 ss = as_tibble(survey)
@@ -118,6 +119,21 @@ data$RV_Summer <- ifelse(data$Survey=="RV_Summer", 1, 0)
 m3=m3a
 
 
+
+
+m3b <- sdmTMB(
+  data = data_bs,
+  formula = N ~ 0 + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall,
+  mesh = mesh,
+  time_varying = ~ 1 + bs1 + bs2 + bs3 + bs4,
+  spatial = "on",
+  family = tweedie(link = "log"),
+  time = "year",
+  spatiotemporal = "rw"
+)
+
+
+
 ##make maps 
 
 model <- m3 ##to say which model to use for maps
@@ -125,8 +141,8 @@ model.lab <- "m3" ##to label maps
 
 
 # Save model results:
-saveRDS(model, file = file.path(project.datadirectory('Framework_LFA35_38'),'outputs','SURVEYS', "summer_fall_Lobster model3 abund.rds"))
-model = readRDS( file = file.path(project.datadirectory('Framework_LFA35_38'),'outputs','SURVEYS', "summer_fall_Lobster model3 abund.rds")) #sept 25 300 knots and winner
+saveRDS(model, file = file.path(project.datadirectory('Framework_LFA35_38'),'outputs','SURVEYS', "summer_fall_Lobster2000+.rds"))
+model = readRDS( file = file.path(project.datadirectory('Framework_LFA35_38'),'outputs','SURVEYS', "summer_fall_Lobster2000+.rds")) #sept 25 300 knots and winner
 
 
 data$resids <- residuals(model) # randomized quantile residuals
@@ -181,14 +197,15 @@ ind38 = get_index(g3538,bias_correct = T)
 g8 = ggplot(subset(ind38,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
 
 
-saveRDS(list(ind35,ind36,ind38),'IndicesFromFullComboModelSept26.rds')
+saveRDS(list(ind35,ind36,ind38),'IndicesFromFullComboModelOct92000+.rds')
+b = readRDS('IndicesFromFullComboModelOct92000+.rds')
+ind35=b[[1]]
+ind36=b[[2]]
+ind38=b[[3]]
 
-
-
-f4 = subset(f,LFA %in% 34)
-g3538 = predict(model,newdata=f4,return_tmb_object = T)
-ind34 = get_index(g3538,bias_correct = T)
-g8 = ggplot(subset(ind34,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
+g5 = ggplot(subset(ind35,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000) ')
+g6 = ggplot(subset(ind36,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
+g8 = ggplot(subset(ind38,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
 
 
 
@@ -350,17 +367,50 @@ ind36 = lp[[2]]
 ind38 = lp[[3]]
 
 #38
-LRP38 = mean(ind38$est[order(ind38$est)][1:10])
+LRP38 = mean(ind38$est[order(ind38$est)][1])
 ggplot(subset(ind38,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')+geom_hline(yintercept = LRP38/1000,col='red')
 
+wb = 'https://cran.r-project.org/src/contrib/Archive/bcp/bcp_3.0.0.tar.gz'
+install.packages(wb, repos=NULL, type="source")
+
+#require(bcp)
+#ao = ind38[,c('year','est')]
+#b = bcp((ao$est),w0 = 0.2, p0 = 0.2)
+#dataf = data.frame(y=ao$year,pr = b$posterior.prob,fi=fitted(b)[,1],da=ao$est)
+
+#K = mean(subset(dataf,y %in% 2015:2018,da)[,1])
+#LRP = K*.2
+#ggplot(dataf,aes(x=y,y=da/1000))+geom_point()+geom_line(data=dataf,aes(x=y,y=fi/1000))+geom_vline(xintercept=subset(dataf,pr>.5,select=y)[,1],colour='red',linetype='dotted',linewidth=1)+theme_test(base_size = 14)+labs(x='Year',y='Abundance')+geom_hline(yintercept=LRP/1000,colour='blue',lwd=1.2)
+
 #36
-LRP36 = mean(ind36$est[order(ind36$est)][1:10])
+LRP36 = mean(ind36$est[order(ind36$est)][1])
 ggplot(subset(ind36,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')+geom_hline(yintercept = LRP36/1000,col='red')
+
+#require(bcp)
+#ao = ind36[which(ind36$year<2024),c('year','est')]
+#b = bcp((ao$est),w0 = 0.29, p0 = 0.1)
+#dataf = data.frame(y=ao$year,pr = b$posterior.prob,fi=fitted(b)[,1],da=ao$est)
+
+#K = mean(subset(dataf,y %in% 2015:2018,da)[,1])
+#LRP = K*.2
+#ggplot(dataf,aes(x=y,y=da/1000))+geom_point()+geom_line(data=dataf,aes(x=y,y=fi/1000))+geom_vline(xintercept=subset(dataf,pr>.91,select=y)[,1],colour='red',linetype='dotted',linewidth=1)+theme_test(base_size = 14)+labs(x='Year',y='Abundance')+geom_hline(yintercept=LRP/1000,colour='blue',lwd=1.2)
+
+
 
 
 #35
-LRP35 = mean(ind35$est[order(ind35$est)][1:10])
+LRP35 = mean(ind35$est[order(ind35$est)][1])
 ggplot(subset(ind35,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')+geom_hline(yintercept = LRP35/1000,col='red')
+
+#ao = ind35[which(ind35$year<2024),c('year','est')]
+#b = bcp((ao$est),w0 = 0.29, p0 = 0.1)
+#dataf = data.frame(y=ao$year,pr = b$posterior.prob,fi=fitted(b)[,1],da=ao$est)
+
+#K = mean(subset(dataf,y %in% 2014:2018,da)[,1])
+#LRP = K*.2
+#ggplot(dataf,aes(x=y,y=da/1000))+geom_point()+geom_line(data=dataf,aes(x=y,y=fi/1000))+geom_vline(xintercept=subset(dataf,pr>.8,select=y)[,1],colour='red',linetype='dotted',linewidth=1)+theme_test(base_size = 14)+labs(x='Year',y='Abundance')+geom_hline(yintercept=LRP/1000,colour='blue',lwd=1.2)
+
+#require(bcp)
 
 
 ##presentation plots

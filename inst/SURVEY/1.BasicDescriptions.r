@@ -300,4 +300,46 @@ y$setno = as.character(y$setno)
 xy = bind_rows(y,xs)
 saveRDS(xy,'proportions70_300.rds')
 
+####################################################################
+#####
+
+fd=file.path(project.datadirectory('Framework_LFA35_38'),'outputs','SURVEYS')
+setwd(fd)
+
+survey = readRDS( file='summer_fall_survey_data_all_N_Sept24.rds')
+survey = st_as_sf(survey)
+
+ns_coast =readRDS(file.path( project.datadirectory("bio.lobster"), "data","maps","CoastSF.rds"))
+st_crs(ns_coast) <- 4326 # 'WGS84'; necessary on some installs
+
+
+sf_use_s2(FALSE) #needed for cropping
+survey <- suppressWarnings(suppressMessages(
+  st_crop(survey,
+          c(xmin = -82, ymin = 4539, xmax = 383, ymax = 5200))))
+
+
+# Project our survey data coordinates:
+
+
+ns_coast <- suppressWarnings(suppressMessages(
+  st_crop(ns_coast,
+          c(xmin = -68, ymin = 41, xmax = -64, ymax = 47.5))))
+
+
+ns_coast <- st_transform(ns_coast, crs_utm20)
+st_geometry(ns_coast) = st_geometry(ns_coast)/1000
+st_crs(ns_coast) <- crs_utm20
+
+survey <- survey %>%   
+  st_as_sf()
+
+surv_utm_coords <- st_coordinates(survey)
+
+survey$X1000 <- surv_utm_coords[,1] 
+survey$Y1000 <- surv_utm_coords[,2] 
+survey = subset(survey,!is.na(N))
+
+ggplot(survey,aes(colour=Survey))+geom_sf()+geom_sf(data=ns_coast,fill='black')
+
 
