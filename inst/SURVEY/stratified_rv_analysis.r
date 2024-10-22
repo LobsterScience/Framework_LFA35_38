@@ -241,7 +241,7 @@ ggplot(out,aes(yr,yst,ymin=ci.yst.l,ymax=ci.yst.u))+geom_point()+geom_path()+geo
 
 
 ################################################################################################################################################
-#### RV survey
+#### NEFSC survey
 require(bio.survey)
 require(bio.lobster)
 require(PBSmapping)
