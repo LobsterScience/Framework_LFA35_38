@@ -32,13 +32,11 @@ plot(strata)
 
 
 ###### Bring in Survey Data #######
-
-
     # import bycatch data from scallop survey
-    lobster.db('scallop.redo')
+    lobster.db('scallop')
     size_range=c(70,82)
     sex=0:3
-    lfa = 36            ###### PICK THE LFA  
+    lfa = 35           ###### PICK THE LFA  
     layerDir=file.path(project.datadirectory("bio.lobster"), "data","maps")
     return_sets_object=F
     
@@ -53,7 +51,7 @@ plot(strata)
     rdef<-merge(rdef,unique(rL[,c("PID", "LFA")]), all.x=T, by="PID")
   
     
- #intersect LFA and strata
+ #subset polygons for target LFA
     lf = subset(rdef,LFA==lfa)
     
 ##Convert to match projection
@@ -61,8 +59,8 @@ plot(strata)
 #intersect strata with lfa    
     v = st_intersection(sdef,lf)
     v$total_area_r = st_area(v) #area within LFA
-    j = which(v$STRATA_ID ==49)
-    if(length(j)>0) v$total_area_r[j] = v$total_area[j] = 239000000
+  #  j = which(v$STRATA_ID ==49)
+   # if(length(j)>0) v$total_area_r[j] = v$total_area[j] = 239000000
   
     scallop.tows$Y = convert.dd.dddd(scallop.tows$START_LAT)
     scallop.tows$X = convert.dd.dddd(scallop.tows$START_LONG)
@@ -94,9 +92,9 @@ plot(strata)
     
     sa = aggregate(cbind(ABUNDANCE_STD_PRU)~TOW_SEQ+STRATA_ID+TOW_DATE+X+Y+YEAR,data=s,FUN=sum)
     
-    totS = st_as_sf(sa,coords = c('X','Y'),crs=st_crs(4326))
+    totS = st_as_sf(sa,coords = c('X','Y'),crs=st_crs(4326)) ### Scallop data with position of sampling
     if(return_sets_object) {return(totS); stop()}
-    ss = st_join(totS,v, join=st_within)
+    ss = st_join(totS,v, join=st_within) ### Adding the merged scallop data with the LFA + Strata object
     xx = subset(ss,LFA==lfa)
     xx$STRATA_ID = xx$STRATA_ID.y 
     xx$STRATA_ID.y = xx$STRATA_ID.x = xx$total_area = NULL
@@ -172,6 +170,6 @@ recruitscal<-ggplot(data = sc, aes(x = YEAR, y = Index)) +
      
 
 ## Change file name to match lfa 
-ggsave(filename = "scalRecruitsLFA35.png", plot = recruitscal, path = "C:/Users/HowseVJ/OneDrive - DFO-MPO/LFA 35-38 Framework Resources/Figures", width = 8, height = 6, units = "in", dpi = 300)
+#ggsave(filename = "scalRecruitsLFA35.png", plot = recruitscal, path = "C:/Users/HowseVJ/OneDrive - DFO-MPO/LFA 35-38 Framework Resources/Figures", width = 8, height = 6, units = "in", dpi = 300)
 
 
