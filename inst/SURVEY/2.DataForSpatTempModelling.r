@@ -273,4 +273,53 @@ survey$z_dist = as.numeric(ds)
 
 saveRDS(survey,file='fall_survey_data_rec_N_Sept16.rds')
 
+###########################################################################
+###################Recruitment sizes
 
+
+
+x = RV_sets()
+
+x = subset(x,month(DATE) %in% 6:8)
+x = subset(x,select=c(mission,setno,LONGITUDE,LATITUDE,DATE,Recruit))
+x$Survey = 'RV'
+
+y = ILTS_ITQ_All_Data(redo_base_data = F,size=c(70,82),aggregate=T,species=2550,biomass = F)
+y = subset(y,select=c(TRIP_ID,SET_NO, SET_LONG,SET_LAT,SET_DATE,SA_CORRECTED_PRORATED_N))    
+y$Survey='ILTS'
+names(y) = names(x)
+
+survey = rbind(x,y)
+survey = subset(survey, month(DATE) %in% c(6:8))
+survey$YEAR = year(survey$DATE)
+survey = st_as_sf(survey,coords = c('LONGITUDE','LATITUDE'),crs=4326)
+
+survey = st_transform(survey,crs_utm20)
+
+surv_utm_coords = st_coordinates(survey)
+survey$X1000 <- surv_utm_coords[,1] /1000
+survey$Y1000 <- surv_utm_coords[,2] /1000
+st_geometry(survey) <- NULL
+survey = st_as_sf(survey,coords = c('X1000','Y1000'),crs=crs_utm20)
+
+sf_use_s2(FALSE) #needed for cropping
+survey <- suppressWarnings(suppressMessages(
+  st_crop(survey,
+          c(xmin = -82, ymin = 4539, xmax = 383, ymax = 5200))))
+
+survey = subset(survey,!is.na(Recruit))
+
+
+#survey and depth from poly
+ss = st_nearest_feature(survey,ba)
+ds = st_distance(survey,ba[ss,],by_element=T)
+st_geometry(ba) = NULL
+survey$z = ba$z[ss]
+survey$z_dist = as.numeric(ds)
+
+##windsorize
+#i = quantile(survey$Legal_wt,0.999)
+#survey$Legal_wt[which(survey$Legal_wt>i)]=i #windsorize extreme catches
+
+
+saveRDS(survey,file='recruit_survey_summer_oct8.rds')
