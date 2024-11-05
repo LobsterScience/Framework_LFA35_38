@@ -78,6 +78,9 @@ return_sets_object=F
     
     sa = aggregate(cbind(ABUNDANCE_STD_PRU)~TOW_SEQ+STRATA_ID+TOW_DATE+X+Y+YEAR,data=s,FUN=sum) #removed bottom temp
     
+    sa$ABUNDANCE_STD_PRU<-(sa$ABUNDANCE_STD_PRU/4267) ### scaled for swept area to report on m2 or km2 because  data is already in standard tows
+    
+    
     totS = st_as_sf(sa,coords = c('X','Y'),crs=st_crs(4326))
     if(return_sets_object) {return(totS); stop()}
     ss = st_join(totS,v, join=st_within)
@@ -86,12 +89,16 @@ return_sets_object=F
     xx$STRATA_ID.y = xx$STRATA_ID.x = xx$total_area = NULL  ### deleting columns
     
     x = aggregate(ABUNDANCE_STD_PRU~STRATA_ID+YEAR+total_area_r,data=xx,FUN=mean)
+   # x = aggregate(ABUNDANCE_STD_PRU~YEAR+total_area_r,data=xx,FUN=mean) ## mean abundance by year
+    
     xa = aggregate(total_area_r~YEAR,data=x,FUN=sum)
     names(xa)[2]='total_area'
     xxa =  merge(x,xa)
     sca = aggregate(ABUNDANCE_STD_PRU*total_area_r/total_area~YEAR,data=xxa,FUN=sum)
     names(sca)=c('YEAR','Index')
-    recxx = as.data.frame(do.call(cbind,rmed(sca$YEAR,sca$Index)))
+    sca$Index<-sca$Index*10^6  #mean number of recruits per km2
+    
+     recxx = as.data.frame(do.call(cbind,rmed(sca$YEAR,sca$Index)))
     names(recxx)=c('YEAR','Rmed')
     out = merge(sca,recxx)
    
@@ -101,7 +108,7 @@ return_sets_object=F
      ggplot(data = out, aes(x = YEAR,y = as.numeric(Index))) +
       geom_point(size=2, colour = '#003f5c')+
       geom_line(data=out,aes(x=YEAR,y=Rmed),colour='#f95d6a',lwd=1.25)+
-      labs(x = "Year", y = "Scallop Survey Recruit Abundance (Mean # per tow)") +
+       labs(x = "Year", y = expression("Scallop Survey Recruit Abundance (Mean Number /  "~Km^2~")"))+
       theme_test()
     
   

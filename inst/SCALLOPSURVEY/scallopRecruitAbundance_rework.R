@@ -36,7 +36,7 @@ plot(strata)
     lobster.db('scallop')
     size_range=c(70,82)
     sex=0:3
-    lfa = 35           ###### PICK THE LFA  
+    lfa = 35         ###### PICK THE LFA  
     layerDir=file.path(project.datadirectory("bio.lobster"), "data","maps")
     return_sets_object=F
     
@@ -45,11 +45,12 @@ plot(strata)
     sdef<-strata
     
     #polygons LFA
-    rL = read.csv(file.path(layerDir,"Polygons_LFA.csv"))
-    rL$label=rL$LFA
-    rdef=Mar.utils::df_to_sf(rL,lat.field = "Y",lon.field = "X")  ## Make Polygons an sf object
-    rdef<-merge(rdef,unique(rL[,c("PID", "LFA")]), all.x=T, by="PID")
-  
+  #  rL = read.csv(file.path(layerDir,"Polygons_LFA.csv"))
+   # rL$label=rL$LFA
+  #  rdef=Mar.utils::df_to_sf(rL,lat.field = "Y",lon.field = "X")  ## Make Polygons an sf object
+  #  rdef<-merge(rdef,unique(rL[,c("PID", "LFA")]), all.x=T, by="PID")
+    rL = readRDS(file.path(layerDir,"Polygons_LFA.rds"))
+    rdef = st_as_sf(rL)
     
  #subset polygons for target LFA
     lf = subset(rdef,LFA==lfa)
@@ -59,14 +60,14 @@ plot(strata)
 #intersect strata with lfa    
     v = st_intersection(sdef,lf)
     v$total_area_r = st_area(v) #area within LFA
-  #  j = which(v$STRATA_ID ==49)
+  #j = which(v$STRATA_ID ==49)
    # if(length(j)>0) v$total_area_r[j] = v$total_area[j] = 239000000
   
     scallop.tows$Y = convert.dd.dddd(scallop.tows$START_LAT)
     scallop.tows$X = convert.dd.dddd(scallop.tows$START_LONG)
     scT = subset(scallop.tows,select=c('TOW_SEQ','TOW_DATE','STRATA_ID','X','Y'))
     
-    scC = subset(scallopSurv,select=c("TOW_SEQ",  "ABUNDANCE_STD","MEAS_VAL", "SEX_ID"))
+    scC = subset(scallopSurv,select=c("TOW_SEQ",  "ABUNDANCE_STD","MEAS_VAL", "SEX_ID")) ## Abundance_STD is the number of lobster per standard tow - standardized tow is 800m long by 5.334m wide ( 800* 5.334m = 4267 METERS SQUARED)
     
     scC = merge(scT,scC,all.x=T)
     scC$YEAR = lubridate::year(scC$TOW_DATE)
@@ -75,22 +76,49 @@ plot(strata)
     i = which(is.na(s$ABUNDANCE_STD))
     s$ABUNDANCE_STD[i]=0
     
-    #add a dummy column for lobsters meeting a criteria for adjusting catch
-    s$dumm= s$dumm2 = 0
+   #  #add a dummy column for lobsters meeting a criteria for adjusting catch
+   #  s$dumm= s$dumm2 = 0
+   #  
+   #  #size subset 
+   #  j = which(s$ABUNDANCE_STD==0) #give me the zeros
+   #  k = which(s$MEAS_VAL >= size_range[1]& s$MEAS_VAL<=size_range[2])
+   #  s$dumm[c(j,k)] = 1
+   #  
+   #  #sex subset
+   #  k = which(s$SEX_ID %in% sex) 
+   #  s$dumm2[c(j,k)] = 1
+   #  
+   #  
+   #  s$ABUNDANCE_STD_PRU = s$ABUNDANCE_STD * s$dumm * s$dumm2
+   #  
+   # sa = aggregate(cbind(ABUNDANCE_STD_PRU)~TOW_SEQ+STRATA_ID+TOW_DATE+X+Y+YEAR,data=s,FUN=sum)
+   
+  #### Rewriting lines 78 - 93
+   s$recruits[s$MEAS_VAL >= size_range[1]& s$MEAS_VAL<=size_range[2]]<-"yes"
+   s$recruits[s$MEAS_VAL < size_range[1]& s$MEAS_VAL<size_range[2]]<-"no"
+   s$recruits[is.na(s$recruits)]<-"no"
+   
+   ## Recruits per tow where they exist
+  recruits<- s %>% group_by(TOW_SEQ) %>% filter(recruits=="yes") %>% summarize(recruit_abun_std=sum(ABUNDANCE_STD))  
+  
+  ##need all tows with lat/longs
+  
+  scT$YEAR<- year(scT$TOW_DATE)        
+  scT = subset(scT,YEAR>=1999)
+   
+  allandrecruit<-merge(scT,recruits, by=c("TOW_SEQ"), all.x = T) ## left join
+   
+allandrecruit$recruit_abun_std[is.na(allandrecruit$recruit_abun_std)]<-0
+
+
+
+## To get recruit per m2 would be  recruit_abund_std / 4267 per tow ---- this results in VERY SMALL NUMBERS - the issue is scale
+allandrecruit$ABUNDANCE_STD_PRU<-(allandrecruit$recruit_abun_std/4267) ## scaled for swept area to report on m2 or km2 because  data is already in standard tows
+#allandrecruit$ABUNDANCE_STD_PRU<-(allandrecruit$recruit_abun_std) 
+
     
-    #size subset 
-    j = which(s$ABUNDANCE_STD==0) #give me the zeros
-    k = which(s$MEAS_VAL >= size_range[1]& s$MEAS_VAL<=size_range[2])
-    s$dumm[c(j,k)] = 1
-    
-    #sex subset
-    k = which(s$SEX_ID %in% sex) 
-    s$dumm2[c(j,k)] = 1
-    
-    
-    s$ABUNDANCE_STD_PRU = s$ABUNDANCE_STD * s$dumm * s$dumm2
-    
-    sa = aggregate(cbind(ABUNDANCE_STD_PRU)~TOW_SEQ+STRATA_ID+TOW_DATE+X+Y+YEAR,data=s,FUN=sum)
+sa<-allandrecruit
+  
     
     totS = st_as_sf(sa,coords = c('X','Y'),crs=st_crs(4326)) ### Scallop data with position of sampling
     if(return_sets_object) {return(totS); stop()}
@@ -99,12 +127,20 @@ plot(strata)
     xx$STRATA_ID = xx$STRATA_ID.y 
     xx$STRATA_ID.y = xx$STRATA_ID.x = xx$total_area = NULL
     
-    x = aggregate(ABUNDANCE_STD_PRU~STRATA_ID+YEAR+total_area_r,data=xx,FUN=mean) ## why is it aggregated by strata here rename this
+  x = aggregate(ABUNDANCE_STD_PRU~STRATA_ID+YEAR+total_area_r,data=xx,FUN=mean) ## mean abundance by strata 
     xa = aggregate(total_area_r~YEAR,data=x,FUN=sum)
     names(xa)[2]='total_area'
     xxa =  merge(x,xa)
- 
     
+    
+    xvar = aggregate(ABUNDANCE_STD_PRU~STRATA_ID+YEAR+total_area_r,data=xx,FUN=var)
+    names(xvar)[4]<-c("Variance")
+    xa = aggregate(total_area_r~YEAR,data=x,FUN=sum)
+    names(xa)[2]='total_area'
+    xxa =  merge(x,xa)
+    
+
+ 
    ###BEFORE 
     #    sca = aggregate(ABUNDANCE_STD_PRU*total_area_r/total_area~YEAR,data=xxa,FUN=sum)
     # names(sca)=c('YEAR','Index')
@@ -147,9 +183,16 @@ plot(strata)
        ) %>%
        select(YEAR, ci_lower, ci_upper)
      
+   
      
-     sca <- aggregate(ABUNDANCE_STD_PRU * total_area_r / total_area ~ YEAR, data = xxa, FUN = sum)
+# standardize abundance of recruits ( corrected for swept area)  multiplied by Strata area divided by total strata area      
+     sca <- aggregate(ABUNDANCE_STD_PRU * total_area_r / total_area ~ YEAR, data = xxa, FUN = sum) 
      names(sca) <- c('YEAR', 'Index')
+     sca$Index<-sca$Index*10^6  #mean number of recruits per km2
+     
+     ci_results$ci_lower<-ci_results$ci_lower*10^6
+     ci_results$ci_upper<-ci_results$ci_upper*10^6
+     
      
      recxx <- as.data.frame(do.call(cbind, rmed(sca$YEAR, sca$Index)))
      names(recxx) <- c('YEAR', 'Rmed')
@@ -158,6 +201,21 @@ plot(strata)
      sc$Index <- as.numeric(sc$Index)
      
      
+ ### Stratified mean abundance or recruits standardized for swept area  as mean number per Km^2   
+     
+    
+     ggplot(data = out, aes(x = YEAR,y = as.numeric(Index))) +
+       geom_point(size=2, colour = '#003f5c')+
+       geom_line(data=out,aes(x=YEAR,y=Rmed),colour='#f95d6a',lwd=1.25)+
+      # geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), width = 0.2) +
+       labs(x = "Year", y = expression("Scallop Survey Recruit Abundance (Mean Number /  "~Km^2~")"))+
+       theme_test()
+     
+     
+     
+     
+     
+#### Plot the recruit index for each LFA     
 theme_set(theme_test(base_size = 14))
     
 recruitscal<-ggplot(data = sc, aes(x = YEAR, y = Index)) +

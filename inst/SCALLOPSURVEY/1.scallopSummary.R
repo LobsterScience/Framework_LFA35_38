@@ -159,8 +159,41 @@ all_tows_with_LFA_df$geometry <- st_geometry(all_tows_with_LFA)
 
 all_tows_with_LFA_df$year<-as.numeric(all_tows_with_LFA_df$year)
 
+##Tow Seq Summaries by Year and LFA
 
-### Determine Mean lobster count per year #### REMAKE WITH STRATA PAIRING
+
+# Filter the data frame to include only LFAs 35, 36, and 38
+filtered_df <- all_tows_with_LFA_df %>%
+  filter(LFA %in% c("35", "36", "38"))
+
+# Calculate the number of unique TOW_SEQ per year
+unique_tow_seq_per_year <- filtered_df %>%
+  group_by(year, LFA) %>%
+  summarise(unique_tow_seq = n_distinct(TOW_SEQ))
+
+# Calculate the number of unique TOW_SEQ per year where abun_std is zero
+unique_tow_zeros <- filtered_df %>%
+  filter(abun_std == 0) %>%
+  group_by(year, LFA) %>%
+  summarise(unique_tow_zeros = n_distinct(TOW_SEQ))
+
+# Calculate the number of unique TOW_SEQ per year where abun_std is greater than zero
+unique_tow_lobs <- filtered_df %>%
+  filter(abun_std > 0) %>%
+  group_by(year, LFA) %>%
+  summarise(unique_tow_lobs = n_distinct(TOW_SEQ))
+
+# Merge the results into a single data frame
+TowSummary_result <- unique_tow_seq_per_year %>%
+  left_join(unique_tow_zeros, by = c("year", "LFA")) %>%
+  left_join(unique_tow_lobs, by = c("year", "LFA"))
+TowSummary_result<-as.data.frame(TowSummary_result)
+
+
+
+
+
+### Determine Mean lobster count per year
 mean_abun <- all_tows_with_LFA_df %>%
   group_by(LFA, year) %>%
   filter(LFA !=34)%>%
