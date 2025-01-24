@@ -30,15 +30,15 @@ crs_utm20 <- 32620
 fd=file.path(project.datadirectory('Framework_LFA35_38'),'outputs','SURVEYS')
 setwd(fd)
 io = readRDS('IndicesFromFullComboModelOct92000+.rds')
-ind35 = io[[1]]
-ind36 = io[[2]]
-ind38 = io[[3]]
+ind35 = io[[3]]
 
-ggplot(subset(ind35,year>=2000 &year<2024),aes(year,est,ymin=lwr,ymax=upr))+geom_point()+geom_ribbon(alpha=.25)+theme_test()+geom_path()
+ioF = readRDS('IndicesFromFullComboModelSept26.rds')
+ind35F = ioF[[3]]
 
-ggplot(subset(ind36,year>=2000 &year<2024),aes(year,est,ymin=lwr,ymax=upr))+geom_point()+geom_ribbon(alpha=.25)+theme_test()+geom_path()
 
-ggplot(subset(ind38,year>=2000 &year<2024),aes(year,est,ymin=lwr,ymax=upr))+geom_point()+geom_ribbon(alpha=.25)+theme_test()+geom_path()
+ggplot(subset(ind35,year>=2000 &year<2024),aes(year,est,ymin=lwr,ymax=upr))+geom_point()+geom_ribbon(alpha=.25)+geom_path()+
+    geom_ribbon(data=subset(ind35F,year<2024),aes(year, est, ymin=lwr,ymax=upr),alpha=.25,fill='red')+geom_point(data=subset(ind35F,year<2024),aes(year, est),pch=1)+geom_path(data=subset(ind35F,year<2024),aes(year, est),linetype='dashed')+
+  theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance')
 
 
 ##converting number to biomass using fall length frequencies from all fall surveys in bay of fundy
@@ -59,43 +59,151 @@ ind35$estB = ind35$est*mnW/1000
 ind35$lwrB = ind35$lwr*mnW/1000
 ind35$uprB = ind35$upr*mnW/1000
 
-ind36$estB = ind36$est*mnW/1000
-ind36$lwrB = ind36$lwr*mnW/1000
-ind36$uprB = ind36$upr*mnW/1000
 
-ind38$estB = ind38$est*mnW/1000
-ind38$lwrB = ind38$lwr*mnW/1000
-ind38$uprB = ind38$upr*mnW/1000
+ind35F$estB = ind35F$est*mnW/1000
+ind35F$lwrB = ind35F$lwr*mnW/1000
+ind35F$uprB = ind35F$upr*mnW/1000
+
+###total landings and landings by vessel
+
+g = lobster.db('landings_by_vessel')
+g$year = g$SYEAR
+g = subset(g,LFA==38,select=c(year,MEAN_T))
+gl = lobster.db('seasonal.landings')
+gl$year= as.numeric(substring(gl$SYEAR,6,9))
+gl = subset(gl,select=c(year,LFA38))
+
+gg = merge(gl,g)
+maxl =max(gg$LFA38)
+maxv = max(gg$MEAN_T)
+ggplot(subset(gg, year<2024), aes(x = year)) +
+  geom_bar(aes(y =LFA38), stat = "identity", width = 0.75,alpha=.25) +
+  geom_point(data = subset(gg,year<2024), aes(y = MEAN_T * (maxl /maxv)),size=3)+
+  geom_line(data = subset(gg,year<2024), aes(y = MEAN_T * (maxl /maxv)),linewidth=1.1) +
+  labs(x = "Season Year", y = "Landings (t)") +
+    scale_y_continuous(
+    limits = c(0, 5800),
+    expand = c(0, 0),
+    sec.axis = sec_axis(~ . * (maxv / maxl), name = "Mean Landings Per Vessel (t)")) + 
+    scale_x_continuous(breaks = seq(1990, 2023, by = 5), expand = c(0.01, 0)) + 
+  guides(fill = "none", color = "none") 
+
+
+#############relationship between mean landings per vessel and Commercial Biomass
+ind35$oyr = ind35$year
+
+ind35$year=ind35$oyr+1
+
+g5 = merge(gg,ind35)
+g5$est1000 = g5$estB/1000
+with(g5,plot(est1000,MEAN_T))
+
+a  <- glm(MEAN_T~I(1/(est1000)),data=g5,family=gaussian(link='inverse'))
+ac = coef(a)
+dn <- data.frame(est1000=c(0,g5[order(g5$est1000),'est1000']))
+dn$Preds  =predict(a,newdata = dn,type = 'response')
+plot(MEAN_T~est1000,data=g5)
+lines(dn$est1000,dn$Preds)
+
+g3 <- ggplot(g5, aes(est1000, MEAN_T)) + geom_point()+theme_test()
+g4 = g3 + geom_smooth(method = "glm", formula = y ~ I(1/x), method.args=list(family = gaussian(link = "inverse")) , fill = "blue", alpha = 0.2,fullrange=T) +labs(x='Survey Commercial Biomass',y='Mean Landings per Vessel')+theme_test(base_size = 14)
 
 
 
+mL = mean(subset(g,year %in% 1990:1995)$MEAN_T)
+LRP_D <- data.frame(est1000=seq(0,300,by=.2))
+LRP_D$Preds  =predict(a,newdata = LRP_D,type = 'response')
 
+LRP = LRP_D$est1000[which.min(abs(LRP_D$Preds-mL))]
 
-g = lobster.db('seasonal.landings')
-g$year= as.numeric(substring(g$SYEAR,6,9))
-ind35$year=ind35$year+1
-g5 = merge(g[,c('year','LFA35')],ind35)
-g5$est1000 = g5$est/1000
+g4+geom_vline(xintercept=LRP,colour='red')+geom_hline(yintercept=mL,colour='black',linetype='dashed')
 
-#beverton holt with gamma errors (Jiao et al 2004 CJFAS 61)
-a  <- glm(LFA35~I(1/(est1000)),data=g5,family=Gamma(link='inverse'))
-b <- coef(a)
+###################
+#### liklihood surface for inverse gaussian
 
-bvh <- function(a,b,S) {
-  a*S / (1+b*S)
+log_likelihood <- function(beta0, beta1, X,Y) {
+  # Compute linear predictor and mean (mu)
+  eta <- beta0 + beta1 * 1/X
+  mu <- 1 / eta
+  
+  # Compute residuals and variance
+  residuals <- Y - mu
+  sigma2 <- var(residuals)
+  
+  # Calculate log-likelihood
+  n <- length(Y)
+  log_likelihood <- -n / 2 * log(2 * pi) - n / 2 * log(sigma2) - sum(residuals^2) / (2 * sigma2)
+  
+  return(log_likelihood)
+}
+beta0_seq <- seq(0.003, .2, length.out = 300)  # Avoid 0 to prevent division by zero
+beta1_seq <- seq(-20,100, length.out = 600)
+likelihood_matrix <- matrix(NA, nrow = length(beta0_seq), ncol = length(beta1_seq))
+
+# Compute log-likelihood for each combination of parameters
+for (i in 1:length(beta0_seq)) {
+  for (j in 1:length(beta1_seq)) {
+    likelihood_matrix[i, j] <- log_likelihood(beta0_seq[i], beta1_seq[j], X=g5$est1000,Y=g5$MEAN_T)
+  }
 }
 
-dn <- data.frame(est1000=c(0,g5[order(g5$est1000),'est1000']))
-plot(LFA35~est1000,data=g5)
-plot(dn$est1000,bvh(a=1/b[2],b=b[1]*b[2],S=dn$est1000))
-legend('topleft',lty=c(1,2,3),cex=.75,c('Beverton-Holt LN','Density Independent',"Beverton-Holt Gamma"),bty='n')
+# Convert the matrix to a data frame for plotting
+likelihood_df <- expand.grid(Beta0 = beta0_seq, Beta1 = beta1_seq)
+likelihood_df$LogLikelihood <- as.vector(likelihood_matrix)
+
+mis = which(likelihood_df$LogLikelihood<quantile(likelihood_df$LogLikelihood,0.05))
+
+likelihood_df1 = likelihood_df
+likelihood_df1$LogLikelihood[mis] <- NA
+ggplot(likelihood_df1, aes(x = Beta0, y = Beta1, z = LogLikelihood)) +
+  geom_contour_filled(aes(color = ..level..), bins = 100) +
+  geom_contour(colour='white')+
+  labs(x = "Intercept (Beta0)", y = "Slope (Beta1)", color = "Log-Likelihood") +
+  theme(legend.position='none')+
+  geom_point(aes(x=ac[1],y=ac[2]))
+
+
+############ what is the distribution around the LRP
+###sample from the joint precision matrix
+require(MASS)
+# Get the coefficients and the design matrix
+beta_hat <- coef(a)
+X_matrix <- model.matrix(a)
+
+# Calculate the Hessian (negative of the second derivative of the log-likelihood)
+# Use the `vcov` function to get the covariance matrix
+vcov_matrix <- vcov(a)
+
+# The joint precision matrix is the inverse of the covariance matrix
+precision_matrix <- solve(vcov_matrix)
+
+# Sample from the multivariate normal distribution
+# Number of samples to draw
+n_samples <- 1000
+
+# Generate samples from the multivariate normal using the mean (beta_hat) and the precision matrix
+samples <- mvrnorm(n_samples, mu = beta_hat, Sigma = solve(precision_matrix))
+
+invG = function(x,b0,b1){
+  1/(b0+(b1*1/x))
+}
+ests = seq(150,500,by=.1)
+#distribution of LRP  
+LRP_jp=c()
+for(i in 1 :nrow(samples)) {
+  y = invG(x=ests,b1=samples[i,2],b0=samples[i,1])
+  LRP_jp = c(LRP_jp, ests[which.min(abs(y-mL))])
+}     
+
+ggplot(as.data.frame(LRP_jp),aes(LRP_jp))+geom_histogram()+labs(x='LRP',y='Frequency')+geom_vline(xintercept = LRP,col='red',linewidth=1.4)
+
+
+g4+geom_vline(xintercept=LRP_jp,colour='red',alpha=.01)+geom_hline(yintercept=mL,colour='black',linetype='dashed')+geom_vline(xintercept=LRP,colour='black')
 
 
 
 
-
-ggplot(g5,aes(x=est,y=LFA35))+geom_point()+
-
+####################################################
 
 
 ggplot(g5,aes(year,est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance')
