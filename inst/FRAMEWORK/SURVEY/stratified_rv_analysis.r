@@ -247,7 +247,7 @@ require(bio.lobster)
 require(PBSmapping)
 la()
 
-rL = readRDS(file.path( project.datadirectory("bio.lobster"), "data","maps","LFAPolysSF.rds"))
+rL = readRDS(file.path(bio.directory,'bio.lobster.data','mapping_data',"LFAPolysSF.rds"))
 rL = st_as_sf(rL)
 rL = st_make_valid(rL)
 
@@ -256,7 +256,7 @@ st_crs(rL) <- 4326
 #using strata within an adjacent 
 x=NEFSC_sets() 
 xs = st_as_sf(x,coords=c('LONGITUDE','LATITUDE'),crs=4326)
-polys = sf::read_sf(find.bio.gis('BTS_Strata'),crs=4326) 
+polys = st_as_sf(readRDS(file.path(bio.directory,'bio.lobster.data','mapping_data','BTS_Strata.rds')) )
 polys = st_make_valid(polys)
 
 xlp = st_join(xs,polys,join=st_within)
