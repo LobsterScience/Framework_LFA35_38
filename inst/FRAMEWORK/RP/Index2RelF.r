@@ -84,6 +84,30 @@ ind35$year=ind35$year+1
 g5 = merge(g[,c('year','LFA35')],ind35)
 
 
+# 
+g5$est1000 = g5$estB/1000
+g5a = subset(g5,year>1999)
+a  <- glm(LFA35~I(1/(est1000)),data=g5a,family=gaussian(link='inverse'))
+
+dn <- data.frame(est1000=c(0,g5a[order(g5a$est1000),'est1000']))
+dn$Preds  =predict(a,newdata = dn,type = 'response')
+plot(LFA35~est1000,data=g5a)
+lines(dn$est1000,dn$Preds)
+#plot(dn$est1000,bvh(a=1/b[2],b=b[1]*b[2],S=dn$est1000), type='l')
+
+
+
+g3 <- ggplot(g5a, aes(est1000, LFA35)) + geom_point()+theme_test()
+g4 = g3 + geom_smooth(method = "glm", formula = y ~ I(1/x), method.args=list(family = gaussian(link = "inverse")) , fill = "blue", alpha = 0.2) +labs(x='Survey Biomass',y='Landings',title='LFA35')
+
+mL = mean(subset(g5,year %in% 1990:1999)$LFA35)
+LRP_D <- data.frame(est1000=seq(0,300,by=.2))
+LRP_D$Preds  =predict(a,newdata = LRP_D,type = 'response')
+
+LRP = LRP_D$est1000[which.min(abs(LRP_D$Preds-mL))]
+
+g4+geom_vline(xintercept=LRP,colour='red')+geom_hline(yintercept=mL,colour='red')
+
 ggplot(g5,aes(year,est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance')
 ggplot(g5,aes(year,LFA35))+geom_bar(stat='identity')+labs(x='Year',y='Landings')+theme_test(base_size=14)
 

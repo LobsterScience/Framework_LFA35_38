@@ -119,21 +119,6 @@ data$RV_Summer <- ifelse(data$Survey=="RV_Summer", 1, 0)
 m3=m3a
 
 
-
-
-m3b <- sdmTMB(
-  data = data_bs,
-  formula = N ~ 0 + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall,
-  mesh = mesh,
-  time_varying = ~ 1 + bs1 + bs2 + bs3 + bs4,
-  spatial = "on",
-  family = tweedie(link = "log"),
-  time = "year",
-  spatiotemporal = "rw"
-)
-
-
-
 ##make maps 
 
 model <- m3 ##to say which model to use for maps
@@ -183,11 +168,14 @@ f$ILTS_Fall <- f$MNH_Fall <- f$MNH_NEFSC_Fall <- 0
 f34 = subset(f,LFA==35)
 g34 = predict(model,newdata=f34,return_tmb_object = T)
 ind35 = get_index(g34,bias_correct = T)
+eao35 = get_eao(g34)
 g5 = ggplot(subset(ind35,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000) ')
 
 f34 = subset(f,LFA==36)
 g34 = predict(model,newdata=f34,return_tmb_object = T)
 ind36 = get_index(g34,bias_correct = T)
+eao36 = get_eao(g34)
+
 g6 = ggplot(subset(ind36,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
 
 
@@ -199,7 +187,7 @@ g8 = ggplot(subset(ind38,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr
 
 saveRDS(list(ind35,ind36,ind38),'IndicesFromFullComboModelOct92000+.rds')
 b = readRDS('IndicesFromFullComboModelOct92000+.rds')
-ind35=b[[1]]
+ind35a=b[[1]]
 ind36=b[[2]]
 ind38=b[[3]]
 
@@ -210,10 +198,65 @@ g8 = ggplot(subset(ind38,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr
 
 
 ###everywhere
-g = predict(model,newdata=f,return_tmb_object = T)
-h = g$data
-h$pred = model$family$linkinv(h$est)
-gsf = st_as_sf(h)
+      g = predict(model,newdata=f,return_tmb_object = T)
+      
+      v = get_index(g,bias_correct = T)
+      #effective area occupied (Thorsen et al 2016)
+      voe = get_eao(g)
+      names(v)[5:6] = c('logAbund','logAbundse')
+   
+      ##ggplot
+      v1 = subset(v,select=c(year,est,lwr,upr))
+      names(v1)[2:4] = c('Abundance','lwrAb','uprAb')
+      
+      voe1 = subset(voe,select=c(year,est,lwr,upr))
+      names(voe1)[2:4] = c('Area','lwrArea','uprArea')
+      
+      vv = merge(v1,voe1)
+      ggplot(subset(vv,year<2024),aes(x=Abundance,y=Area,xmin=lwrAb,xmax=uprAb,ymin=lwrArea,ymax=uprArea))+geom_point(size=2)+geom_errorbar(linetype='dotted')+geom_errorbarh(linetype='dotted')+theme_test(base_size = 14)+geom_path()
+      
+      
+      ################################################################   
+      ##can we detect a positive slope between abund and distr (DDHS), there are errors in variables so need to account for that--bayesian makes most sense to me
+      df = merge(subset(voe,select=c(year,log_est)),subset(v,select=c(year,logAbund,logAbundse)))
+     df$sa = df$logAbund
+     df = subset(df,year<2024)
+     ##base model
+     
+     model <- brm(
+        formula = bf(log_est ~ sa),  
+        data = df,
+        family = gaussian(),
+        prior = c(
+          set_prior("normal(0, 10)", class = "b"),
+          set_prior("normal(0, 1)", class = "Intercept")
+        ),
+        chains = 4,
+        iter = 2000
+      )
+      dr =  as.data.frame(model)
+     ##sample across errors in x
+     gsa <- function(row) {
+       (rnorm(1, mean = row['logAbund'], sd = row['logAbundse']))
+     }
+     
+     junk=list()
+     iter=100
+     for(i in 1:iter){
+       df$sa <- apply(df, 1, gsa)
+       um = update(model, newdata=df)
+       junk[[i]]  = as.data.frame(um)
+     }
+     
+     drd = bind_rows(junk)
+     
+     ggplot(drd,aes(b_sa))+
+     geom_density() +
+       theme_test(base_size = 14)+xlab('slope- log(Area)~log(Abundance)')
+      
+      h = g$data
+      h$pred = model$family$linkinv(h$est)
+      gsf = st_as_sf(h)
 
 
 ##features
