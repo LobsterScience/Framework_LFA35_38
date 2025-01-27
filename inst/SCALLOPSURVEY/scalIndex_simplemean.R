@@ -79,7 +79,7 @@ ss = st_join(totS,lf, join=st_within) ### Adding the merged scallop data with th
 xx = subset(ss,LFA==lfa)
 
 
-###95% Cis - Bootstrap
+###95% Cis - Bootstrap on the sets within strata
 
 mean_function <- function(data, indices) {
   d <- data[indices, ]  
@@ -109,10 +109,10 @@ names(x) <- c('YEAR', 'Index')
 x$Index<-x$Index*10^6  #mean number of recruits per km2
 
 ##Variance
-simpVar<- aggregate(ABUNDANCE_STD_PRU~YEAR,data=xx,FUN=sd)
-x$SD<-simpVar$ABUNDANCE_STD_PRU*10^6 
-x$ci_upper<-x$Index+x$SD
-x$ci_lower<-x$Index-x$SD
+#simpVar<- aggregate(ABUNDANCE_STD_PRU~YEAR,data=xx,FUN=sd)
+#x$SD<-simpVar$ABUNDANCE_STD_PRU*10^6 
+#x$ci_upper<-x$Index+x$SD
+#x$ci_lower<-x$Index-x$SD
 
 
 
@@ -136,12 +136,12 @@ ggplot(data = sc, aes(x = YEAR,y = as.numeric(Index))) +
   labs(x = "Year", y = expression("Scallop Survey Recruit Abundance (Mean Number /  "~Km^2~")"))+
   theme_test()
 
-ggplot(data = x, aes(x = YEAR,y = as.numeric(Index))) +
-  geom_point(size=2, colour = '#003f5c')+
-  geom_line(data=out,aes(x=YEAR,y=Rmed),colour='#f95d6a',lwd=1.25)+
-  geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), width = 0.2)+
-  labs(x = "Year", y = expression("Scallop Survey Recruit Abundance (Mean Number /  "~Km^2~")"))+
-  theme_test()
+#ggplot(data = x, aes(x = YEAR,y = as.numeric(Index))) +
+#  geom_point(size=2, colour = '#003f5c')+
+#  geom_line(data=out,aes(x=YEAR,y=Rmed),colour='#f95d6a',lwd=1.25)+
+#  geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), width = 0.2)+
+#  labs(x = "Year", y = expression("Scallop Survey Recruit Abundance (Mean Number /  "~Km^2~")"))+
+#  theme_test()
 
 
 

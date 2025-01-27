@@ -162,6 +162,9 @@ sa<-allandrecruit
     #  
      
      
+    
+    ##you need to bootstrap the sets within strata not the mean of the strata: but some strata only have one tow
+    
 ##Bootstrap of 95% CI     
      mean_function <- function(data, indices) {
        d <- data[indices, ]  
