@@ -29,7 +29,7 @@ crs_utm20 <- 32620
 
 fd=file.path(project.datadirectory('Framework_LFA35_38'),'outputs','SURVEYS')
 setwd(fd)
-io = readRDS('IndicesFromFullComboModelOct92000+.rds')
+io = readRDS('IndicesFromFullComboModelJan282000+.rds')
 ind35 = io[[1]]
 ind36 = io[[2]]
 ind38 = io[[3]]
@@ -79,6 +79,36 @@ g5 = merge(g[,c('year','LFA35')],ind35)
 
 ggplot(g5,aes(year,est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance')
 ggplot(g5,aes(year,LFA35))+geom_bar(stat='identity')+labs(x='Year',y='Landings')+theme_test(base_size=14)
+
+#relF
+g5$relFu = g5$LFA35 / (g5$uprB/1000)
+g5$relFl = g5$LFA35 / (g5$lwrB/1000)
+g5$relF = g5$LFA35 / (g5$estB/1000)
+ggplot(g5,aes(year,relF,ymin=relFl,ymax=relFu))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Relative Fishing Mortality')
+
+g = lobster.db('seasonal.landings')
+g$year= as.numeric(substring(g$SYEAR,6,9))
+ind36$year=ind36$year+1
+g6 = merge(g[,c('year','LFA36')],ind36)
+
+g6$relFu = g6$LFA36 / (g6$uprB/1000)
+g6$relFl = g6$LFA36 / (g6$lwrB/1000)
+g6$relF = g6$LFA36 / (g6$estB/1000)
+ggplot(g6,aes(year,relF,ymin=relFl,ymax=relFu))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Relative Fishing Mortality')
+
+
+g = lobster.db('seasonal.landings')
+g$year= as.numeric(substring(g$SYEAR,6,9))
+ind38$year=ind38$year+1
+g = na.zero(g, 'LFA38B')
+g$LFA38 = g$LFA38+g$LFA38B
+g8 = merge(g[,c('year','LFA38')],ind38)
+
+g8$relFu = g8$LFA38 / (g8$uprB/1000)
+g8$relFl = g8$LFA38 / (g8$lwrB/1000)
+g8$relF = g8$LFA38 / (g8$estB/1000)
+ggplot(g8,aes(year,relF,ymin=relFl,ymax=relFu))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Relative Fishing Mortality')
+
 
 #tremblay 2012
 ggplot(g5,aes(year,LFA35))+geom_bar(stat='identity')+labs(x='Year',y='Landings')+theme_test(base_size=14)+geom_hline(yintercept =292,colour='red',linewidth=2 )

@@ -185,7 +185,7 @@ ind38 = get_index(g3538,bias_correct = T)
 g8 = ggplot(subset(ind38,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
 
 
-saveRDS(list(ind35,ind36,ind38),'IndicesFromFullComboModelOct92000+.rds')
+saveRDS(list(ind35,ind36,ind38),'IndicesFromFullComboModelJan282000+.rds')
 b = readRDS('IndicesFromFullComboModelOct92000+.rds')
 ind35a=b[[1]]
 ind36=b[[2]]
@@ -310,11 +310,11 @@ gsfr = subset(gsf,LFA %in% c(34,35,36,37,38) & Y1000>4850)
 #mm = c(0.,max(quantile(gsfr$pred,.999)))
 #gsfr$CommB = ifelse(gsfr$pred>mm[2],mm[2],gsfr$pred)
 gsfr$CommN = gsfr$pred
-gb = ggplot(subset(gsfr, year %in% c(1970:2023))) +
+gb = ggplot(subset(gsfr, year %in% c(2000:2023))) +
   geom_sf(aes(fill=CommN,color=CommN),size=2.1) + 
   scale_fill_viridis_c(trans='log') +
   scale_color_viridis_c(trans='log') +
-#  facet_wrap(~year) +
+  facet_wrap(~year) +
   geom_sf(data=ns_coast,fill='black')+
   geom_sf(data=rL,colour='black',fill=NA)+
   
@@ -325,12 +325,14 @@ gb = ggplot(subset(gsfr, year %in% c(1970:2023))) +
 
 
 
+
 j1 = gb + transition_time(as.integer(year))+labs(title="Year: {frame_time}")
 animate(j1,duration=25,height=7,width=7,units="in",res=250)
 anim_save(filename = 'ModelM7anim.gif')
 
 ###se of predictions 
 g = predict(model,newdata=f,se=T,nsim=50)
+##gNsim = predict(model,newdata=f,se=F,nsim=3000)
 gg = model$family$linkinv(g)
 
 f$se = apply(gg,1,sd)
