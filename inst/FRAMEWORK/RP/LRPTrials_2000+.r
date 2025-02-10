@@ -3,13 +3,8 @@
 
 library(splines)
 library(MASS) ##for glm.nb function
-
-#remotes::install_github("TobieSurette/gulf.spatial", dependencies = TRUE)
-
 library(sdmTMB)
 library(sdmTMBextra)
-
-##these are used to make the mesh
 library(dplyr)
 library(ggplot2)
 require(sdmTMB)
@@ -29,7 +24,7 @@ crs_utm20 <- 32620
 
 fd=file.path(project.datadirectory('Framework_LFA35_38'),'outputs','SURVEYS')
 setwd(fd)
-io = readRDS('IndicesFromFullComboModelOct92000+.rds')
+io = readRDS('IndicesFromFullComboModelJan282000+.rds')
 ind35 = io[[1]]
 ind36 = io[[2]]
 ind38 = io[[3]]
