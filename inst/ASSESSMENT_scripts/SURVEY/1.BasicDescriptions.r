@@ -3,6 +3,7 @@
 require(bio.lobster)
 require(devtools)
 require(bio.utilities)
+require(lubridate)
 require(sf)
 require(ggplot2)
 require(tidyr)
