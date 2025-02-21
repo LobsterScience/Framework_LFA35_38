@@ -25,11 +25,12 @@ require(PBSmapping)
 require(SpatialHub)
 require(sf)
 la()
+
 crs_utm20 <- 32620
 
 fd=file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS')
 setwd(fd)
-io = readRDS('IndicesFromFullComboModelJan17_2000+.rds')
+io = readRDS('IndicesFromFullComboModelFeb14_2000+.rds')
 ind36 = io[[2]]
 
 ##converting number to biomass using fall length frequencies from all fall surveys in bay of fundy
@@ -116,40 +117,14 @@ with(g5,plot(est1000,MEAN_T))
                             ggplot(as.data.frame(model),aes(b_Intercept,b_I1DsE))+
                               geom_hex(bins = 70) +
                               scale_fill_continuous(type = "viridis") +
-                              scale_x_continuous(limits=c(0.015,.04))+
+                              scale_x_continuous(limits=c(0.028,.067))+
                             theme_bw()
                             mod = as.data.frame(model)
-                            ###lines
-                            g3 <- ggplot(g5, aes(est1000, MEAN_T,ymin=lCI,ymax=uCI,xmin=lwrB/1000,xmax=uprB/1000)) + geom_point(size=2)+geom_errorbar(data=g5, aes(est1000, ymin=lCI,ymax=uCI),linetype='dotted')+geom_errorbarh(data=g5, aes(xmin= lwrB/1000,xmax=uprB/1000),linetype='dotted')+theme_test(base_size = 14)+labs(x='Survey Biomass',y='Landings per Vessel')
+         
                             
-                            
-                            xs = data.frame(sE=seq(0,max(g5$est1000),length.out=20))
-                            xp = as.data.frame(model)
-                            
-                            
-                            jnk = list()
-                            for(i in 1:nrow(xp)){
-                              xs$Pred = 1/(xp[i,'b_Intercept']+xp[i,'b_I1DsE']/xs$sE)
-                              xs$i = i
-                              jnk[[i]] = xs
-                            }
-                            
-                            ###LRP from base model
-                            ests = seq(0,300,by=.1)
-                            #distribution of LRP  
-                            LRP=c()
-                            for(i in 1 :nrow(xp)) {
-                              y = 1/(xp[i,'b_Intercept']+xp[i,'b_I1DsE']/ests)
-                              LRP = c(LRP, ests[which.min(abs(y-mL))])
-                            }     
-                            
-                            
-                            kk = bind_rows(jnk)
-                            bk = aggregate(Pred~sE,data=kk, FUN=function(x) quantile(x,c( 0.025,0.975)))
-                            
-                ##rerun based on EIV This step takes time
+                     ##rerun based on EIV This step takes time
                             gsa <- function(row) {
-                              mm = findMoments(as.numeric(row['lwrB'])/1000,as.numeric(row['uprB'])/1000,dist='lnorm')
+                              mm = findMoments(as.numeric(row['lwrB'])/1000,as.numeric(row['uprB'])/1000,dist='lnorm',plot=F)
                               rlnorm(1, mean = mm$xbar, sd = sqrt(mm$sig2))
                             }
                             
@@ -165,8 +140,10 @@ with(g5,plot(est1000,MEAN_T))
                             ggplot(dd,aes(b_Intercept,b_I1DsE))+
                               geom_hex(bins = 70) +
                               scale_fill_continuous(type = "viridis") +
-                              scale_x_continuous(limits=c(0.01,.058))+
+                              scale_x_continuous(limits=c(0.024,.069))+
                               theme_test(base_size=14)+ labs(x='Intercept',y='Slope')
+    
+      xs = data.frame(sE=seq(0,max(g5$est1000),length.out=20))
                             
                             
                             jnk = list()
@@ -227,5 +204,5 @@ gll$relF_u = gll$LFA36/(gll$uprB/1000)
 ggplot(subset(gll),aes(x=year,y=relF,ymin=relF_l,ymax=relF_u))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+
   theme_test(base_size = 14)+labs(x='Year',y='Relative Fishing Mortality ')
 
-saveRDS(list(ind36,LRP_buff,g5,b,mL,gll),file='LFA36Index_RPs_Jan_20_2025.rds')
+saveRDS(list(ind36,LRP_buff,g5,b,mL,gll),file='LFA36Index_RPs_Feb18_2025.rds')
 
