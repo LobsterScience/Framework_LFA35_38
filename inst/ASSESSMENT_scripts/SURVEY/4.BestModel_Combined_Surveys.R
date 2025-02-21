@@ -100,14 +100,14 @@ data$RV_Summer <- ifelse(data$Survey=="RV_Summer", 1, 0)
 
 
 # Save model results:
-saveRDS(model, file = file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS', "bestModel_commLobster2000+jan172025.rds"))
+saveRDS(model, file = file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS', "bestModel_commLobster2000+feb142025.rds"))
 
 
 data$resids <- residuals(model) # randomized quantile residuals
 qqnorm(data$resids)
 qqline(data$resids)
 
-ff = readRDS(file.path(bio.directory,"bio.lobster.data","mapping_data","bathy_by_lfa_37split_noMidas_noPass.rds"))
+ff = readRDS(file.path(bio.directory,"bio.lobster.data","mapping_data",'bathy_byLFA_noLFA37_noMidas_noPass.rds')) #fixed to remove LFA 37 from all predictions Feb 11, 2025
 ff = subset(ff,PID %in% 34:38)
 ff = subset(ff,z<max(data$z) & z>5)
 ff$depth.scaled = (ff$z-mean(data$z))/sd(data$z)
@@ -147,7 +147,6 @@ g5 = ggplot(subset(ind35),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+ge
 f36 = subset(f,PID==36)
 g36 = predict(model,newdata=f36,return_tmb_object = T)
 ind36 = get_index(g36,bias_correct = T) 
-
 g6 = ggplot(subset(ind36),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
 
 
@@ -157,15 +156,15 @@ ind38 = get_index(g38,bias_correct = T)
 g8 = ggplot(subset(ind38),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
 
 
-saveRDS(list(ind35,ind36,ind38),'IndicesFromFullComboModelJan17_2000+.rds')
-b = readRDS('IndicesFromFullComboModelNov122000+.rds')
-ind35=b[[1]]
-ind36=b[[2]]
-ind38=b[[3]]
+saveRDS(list(ind35,ind36,ind38),'IndicesFromFullComboModelFeb14_2000+.rds')
+#b = readRDS('IndicesFromFullComboModelJan17_2000+.rds')
+#ind351=b[[1]]
+#ind361=b[[2]]
+#ind381=b[[3]]
 
 g5 = ggplot(subset(ind35,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000) ')
 g6 = ggplot(subset(ind36,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
-g8 = ggplot(subset(ind38,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
+g8 = ggplot(subset(ind38),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
 
 
 ###everywhere
