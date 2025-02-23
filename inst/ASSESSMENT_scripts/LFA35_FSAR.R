@@ -7,6 +7,8 @@ require(bio.utilities)
 require(ggplot2)
 require(dplyr)
 require(cowplot)
+require(magick)
+library(ggplotify)
 
 
 p=list()
@@ -169,7 +171,6 @@ for(i in 1:length(aa)){
 ca =as.data.frame(do.call(rbind,cpue.ann))
 
 
-#### WHY IS THIS DIFFERENT THAN Previous updates?
 plot1_cpue <- ggplot(subset(ca,LFA %in% c(35)),aes(x=SYEAR,y=unBCPUE))+
               geom_point()+
               geom_line()+
@@ -183,7 +184,10 @@ plot1_cpue <- ggplot(subset(ca,LFA %in% c(35)),aes(x=SYEAR,y=unBCPUE))+
 
 biomass35<-L35data[[1]]
 LRP_BUFF<-L35data[[2]] ## For the mean  to get the LRP buffer
-plot1_biomass<-ggplot(biomass35,aes(x=year,y=estB/1000,ymin=lwrB/1000,ymax=uprB/1000))+
+
+
+
+plot1_biomass<-ggplot(biomass35,aes(x=oyr,y=estB/1000,ymin=lwrB/1000,ymax=uprB/1000))+
   geom_point()+geom_line()+
   geom_ribbon(alpha=.25)+
   labs(x='Year',y='Commercial Biomass (x000) ')+
@@ -207,3 +211,19 @@ cowplot::plot_grid( plot1_catchef,plot1_cpue, plot1_biomass,plot1_relF, ncol = 2
 
 
 
+#### Plot two 
+
+
+plot2_recruits <- ggplot() +
+  labs(x = "Year", y = "Settler Density") +
+  annotate("text", x = 2008, y = 4, label = "Data Not Available", size = 5, colour = 'grey') +
+  scale_x_continuous(limits = c(1990, 2024)) +
+  scale_y_continuous(limits = c(0, 8)) +
+  theme_minimal() +
+  theme_csas()
+
+
+image_path <- "C:/Users/HowseVJ/OneDrive - DFO-MPO/LFA 35-38 Assessments- FSAR/Figures/BOF_RV_Temp.jpg"
+plot2_temp <- image_read(image_path)
+plot2_temp_grob <- as.grob(plot2_temp)
+combined_plot <- plot_grid(plot2_recruits, plot2_temp_grob, ncol = 2, labels = "AUTO", align = "hv", axis = "tb")
