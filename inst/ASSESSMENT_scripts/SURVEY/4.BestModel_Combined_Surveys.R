@@ -101,6 +101,7 @@ data$RV_Summer <- ifelse(data$Survey=="RV_Summer", 1, 0)
 
 # Save model results:
 saveRDS(model, file = file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS', "bestModel_commLobster2000+feb142025.rds"))
+model = readRDS( file = file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS', "bestModel_commLobster2000+feb142025.rds"))
 
 
 data$resids <- residuals(model) # randomized quantile residuals
@@ -142,21 +143,29 @@ f$ILTS_Fall <- f$MNH_Fall <- f$MNH_NEFSC_Fall <- 0
 f35 = subset(f,PID==35)
 g35 = predict(model,newdata=f35,return_tmb_object = T)
 ind35 = get_index(g35,bias_correct = T)
+ind35q1q3 = get_index(g35,bias_correct = T,level=0.25)
+
 g5 = ggplot(subset(ind35),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000) ')
 
 f36 = subset(f,PID==36)
 g36 = predict(model,newdata=f36,return_tmb_object = T)
 ind36 = get_index(g36,bias_correct = T) 
+ind36q1q3 = get_index(g36,bias_correct = T,level=0.25)
+
 g6 = ggplot(subset(ind36),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
 
 
 f38 = subset(f,PID %in% 38)
 g38 = predict(model,newdata=f38,return_tmb_object = T)
 ind38 = get_index(g38,bias_correct = T)
+ind38q1q3 = get_index(g38,bias_correct = T,level=0.25)
+
 g8 = ggplot(subset(ind38),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
 
 
 saveRDS(list(ind35,ind36,ind38),'IndicesFromFullComboModelFeb14_2000+.rds')
+saveRDS(list(ind35q1q3,ind36q1q3,ind38q1q3),'IndicesFromFullComboModelFeb14_2000+_q1q3.rds')
+
 #b = readRDS('IndicesFromFullComboModelJan17_2000+.rds')
 #ind351=b[[1]]
 #ind361=b[[2]]

@@ -33,12 +33,13 @@ yd = rbind(subset(d,select=c(year,X,Y,temp)),subset(y,select=c(year,X,Y,temp)))
 
 yd = st_as_sf(yd,coords=c('X','Y'),crs=4326)
 ydu = st_transform(yd,crs=32620)
-
+sf_use_s2(FALSE)
 ##prediction grid from bathy
 ba = readRDS('~/git/bio.lobster.data/mapping_data/bathymetrySF.rds')
 ba = subset(ba,z>15)
 pa = readRDS('~/git/bio.lobster.data/mapping_data/Summer_RV_strata.rds')
-pau = st_union(st_make_valid(subset(pa,PID>=470)))
+pa  = st_make_valid(subset(pa,PID>=470))
+pau = st_union(pa)
 pau = st_transform(pau,crs=32620)
 ba_i = ba[st_within(ba,st_as_sf(pau), sparse=FALSE),]
 
@@ -59,15 +60,15 @@ for(i in 1:length(yrs)){
 
 ##climatology 1991-2020
 
-ba_i$clim <- ba_i %>% 
-        st_set_geometry(NULL) %>% 
+ba_i$clim <- ba_i %>%
+        st_set_geometry(NULL) %>%
         select(matches("^X(199[1-9]|200[0-9]|201[0-9]|2020)")) %>%
         rowMeans( na.rm = TRUE)
 
 
-ggplot(ba_i,aes(colour=clim,fill=clim))+geom_sf()+
-  scale_color_viridis_c()+ 
-  scale_fill_viridis_c()
+#ggplot(ba_i,aes(colour=clim,fill=clim))+geom_sf()+
+#  scale_color_viridis_c()+
+#  scale_fill_viridis_c()
 
 ba_i$id=1:nrow(ba_i)
 
@@ -92,14 +93,14 @@ ns_coast <- suppressWarnings(suppressMessages(
 
 ns_coast <- st_transform(ns_coast, 32620)
 
-ggplot()+geom_sf(data=ns_coast)+
-  geom_sf(data=subset(ld,year%in%2024),aes(fill=Anomaly,colour=Anomaly),size=1)+
-  scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)+
-    theme_test_adam()+
-  facet_wrap(~year)+
-  coord_sf()
-  
+#ggplot()+geom_sf(data=ns_coast)+
+#  geom_sf(data=subset(ld,year%in%2024),aes(fill=Anomaly,colour=Anomaly),size=1)+
+#  scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)+
+#  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)+
+#    theme_test_adam()+
+#  facet_wrap(~year)+
+#  coord_sf()
+
 
 ag = aggregate(Anomaly~year,data=ld,FUN=mean)
 agm <- ag %>%
@@ -144,7 +145,8 @@ ggplot(agm,aes(x=year,y=Anomaly))+geom_line()+geom_point(shape=1,size=2.5)+
   geom_hline(yintercept=0,colour='grey',size=1.4)+
   geom_hline(yintercept=sd(ld$clim)*.5,colour='grey',size=1.4,linetype='dashed')+
   geom_hline(yintercept=sd(ld$clim)*-.5,colour='grey',size=1.4,linetype='dashed')+
-  annotate("text", x = 2019, y = -1.7, label = 'Mean = 7.60\u00B0C ' , 
+  annotate("text", x = 2019, y = -1.7, label = 'Mean = 7.60\u00B0C ' ,
             size = 5, color = "black")+
   theme_test(base_size = 14)+labs(x='Year',y='Temperature Anomaly')
 
+saveRDS(list(agm,rr,rf,sd(ld$clim)),file='BTAnom4x.rds')
