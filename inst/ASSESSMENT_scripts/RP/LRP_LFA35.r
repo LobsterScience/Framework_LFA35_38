@@ -50,7 +50,19 @@ ind35$estB = ind35$est*mnW/1000
 ind35$lwrB = ind35$lwr*mnW/1000
 ind35$uprB = ind35$upr*mnW/1000
 
+xx = readRDS('IndicesFromFullComboModelFeb14_2000+_q1q3.rds')
+ind35q1q3 = xx[[1]]
 
+ind35q1q3$estB = ind35q1q3$est*mnW/1000
+ind35q1q3$lwrB = ind35q1q3$lwr*mnW/1000
+ind35q1q3$uprB = ind35q1q3$upr*mnW/1000
+
+
+#change from max
+mean(ind35$estB[which(ind35$year %in% 2021:2024)]) /mean(ind35$estB[order(ind35$estB,decreasing = T)][1:3]) 
+
+
+with(subset(ind35,year>=2018),mean(estB))
 
 g = lobster.db('landings_by_vessel.redo')
 g$year = g$SYEAR
@@ -142,6 +154,7 @@ with(g5,plot(est1000,MEAN_T))
                               scale_x_continuous(limits=c(0.01,.058))+
                               theme_test(base_size=14)+ labs(x='Intercept',y='Slope')
                             
+                            xs = data.frame(sE=seq(0,max(g5$est1000),length.out=20))
                             
                             jnk = list()
                             for(i in 1:nrow(dd)){
@@ -189,7 +202,9 @@ mean(LRP_buff); quantile(LRP_buff, c(0.025,0.975))
 #biomass and LRP
 ggplot(subset(ind35),aes(x=year,y=estB/1000,ymin=lwrB/1000,ymax=uprB/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+
   theme_test(base_size = 14)+labs(x='Year',y='Commercial Biomass (x000) ')+
-  geom_hline(yintercept=LRP_buff,colour='red',alpha=.005)+geom_hline(yintercept=mean(LRP_buff),colour='black')
+  geom_line(data=ind35q1q3,aes(x=year+1,y=lwrB/1000),colour='red')+
+#  geom_hline(yintercept=LRP_buff,colour='red',alpha=.005)+
+    geom_hline(yintercept=mean(LRP_buff),colour='black')
 
 gll = merge(ind35,gl)
 
