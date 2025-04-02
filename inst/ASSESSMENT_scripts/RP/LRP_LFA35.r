@@ -58,6 +58,13 @@ ind35q1q3$lwrB = ind35q1q3$lwr*mnW/1000
 ind35q1q3$uprB = ind35q1q3$upr*mnW/1000
 
 
+mm = readRDS('IndicesFromFullComboModelFeb14_2000+_q1q3.rds')
+#lower 25%
+ind35lwr = subset(mm[[1]],year==2024,select=lwr)
+ind36lwr = subset(mm[[2]],year==2024,select=lwr)
+ind38lwr = subset(mm[[3]],year==2024,select=lwr)
+ta = data.frame(LFA=c(35,36,38),TermB.25=c(as.numeric(ind35lwr)*mnW/1000,as.numeric(ind36lwr)*mnW/1000,as.numeric(ind38lwr)*mnW/1000))
+
 #change from max
 mean(ind35$estB[which(ind35$year %in% 2021:2024)]) /mean(ind35$estB[order(ind35$estB,decreasing = T)][1:3]) 
 
