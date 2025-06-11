@@ -119,11 +119,14 @@ aaa <- head(aaa, -1)
 
 ##Landings description numbers
 landef<-aaa[, c("SYEAR", "yr","LFA35")]
-filtered_df <- landef[landef$SYEAR >= 1994 & landef$SYEAR <= 2024, ]
+filtered_df <- landef[landef$yr >= 1994 & landef$yr <= 2024, ]
 median_landings <- median(filtered_df$LFA35, na.rm = TRUE)
 
+deltaL <- landef$LFA35[which(landef$LFA35==(max(landef$LFA35))):length(landef$LFA35) ]
+x = seq_along(deltaL)
 
-
+regdelta = lm(deltaL~x)
+coef(regdelta)[2] / deltaL[1] * 100
 
 plot1_catchef <- ggplot(data = subset(aaa, yr > 1990), aes(x = yr, y = LFA35)) +
   geom_bar(stat = 'identity', aes(fill = ifelse(yr == 2024, 'gray66', 'black')), show.legend = FALSE) +
