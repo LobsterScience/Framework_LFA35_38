@@ -29,7 +29,7 @@ crs_utm20 <- 32620
 
 fd=file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS')
 setwd(fd)
-io = readRDS('IndicesFromFullComboModelFeb14_2000+.rds')
+io = readRDS('IndicesFromFullComboModelJan17_2000+.rds')
 ind35 = io[[1]]
 
 ##converting number to biomass using fall length frequencies from all fall surveys in bay of fundy
@@ -66,7 +66,7 @@ ind38lwr = subset(mm[[3]],year==2024,select=lwr)
 ta = data.frame(LFA=c(35,36,38),TermB.25=c(as.numeric(ind35lwr)*mnW/1000,as.numeric(ind36lwr)*mnW/1000,as.numeric(ind38lwr)*mnW/1000))
 
 #change from max
-mean(ind35$estB[which(ind35$year %in% 2021:2024)]) /mean(ind35$estB[order(ind35$estB,decreasing = T)][1:3]) 
+mean(ind35$estB[which(ind35$year == 2024)]) /mean(ind35$estB[order(ind35$estB,decreasing = T)][1:3]) 
 
 
 with(subset(ind35,year>=2018),mean(estB))

@@ -62,7 +62,7 @@ for(i in 1:length(yrs)){
 
 ba_i$clim <- ba_i %>%
         st_set_geometry(NULL) %>%
-        select(matches("^X(199[1-9]|200[0-9]|201[0-9]|2020)")) %>%
+        dplyr::select(dplyr::matches("^X(199[1-9]|200[0-9]|201[0-9]|2020)")) %>%
         rowMeans( na.rm = TRUE)
 
 
@@ -138,7 +138,7 @@ rff = aggregate(Anomaly~index,data=result,FUN=mean)
 
 mean(ld$clim)
 
-ggplot(agm,aes(x=year,y=Anomaly))+geom_line()+geom_point(shape=1,size=2.5)+
+tm = ggplot(agm,aes(x=year,y=Anomaly))+geom_line()+geom_point(shape=1,size=2.5)+
   geom_line(aes(y=running_mean),colour='black',size=1.4)+
   geom_segment(data=rr,aes(x=year,xend=maxy,y=Anomaly,yend=Anomaly),colour='red',size=1.3)+
   geom_segment(data=rf,aes(x=year,xend=maxy,y=Anomaly,yend=Anomaly),colour='blue',size=1.3)+

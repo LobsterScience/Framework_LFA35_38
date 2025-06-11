@@ -13,7 +13,7 @@ fd = file.path(project.datadirectory('Framework_LFA35_38'),'outputs','CPUE')
 setwd(fd)
 
 aT = lobster.db('process.logs')
-aT = subset(aT,SYEAR>2005 & SYEAR<2024 & LFA %in% c(35,36,38))
+aT = subset(aT,SYEAR>2005 & SYEAR<2025 & LFA %in% c(35,36,38))
 
 
 aa = split(aT,f=list(aT$LFA,aT$SYEAR))
@@ -21,7 +21,7 @@ cpue.lst<-list()
 cpue.ann<- list()
 for(i in 1:length(aa)){
   tmp<-aa[[i]]
-  if(nrow(tmp)==0) next
+  #if(nrow(tmp)==0) next
   tmp = tmp[,c('DATE_FISHED','WEIGHT_KG','NUM_OF_TRAPS')]
   names(tmp)<-c('time','catch','effort')
   tmp$date<-as.Date(tmp$time)

@@ -166,7 +166,7 @@ g8 = ggplot(subset(ind38),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+ge
 saveRDS(list(ind35,ind36,ind38),'IndicesFromFullComboModelFeb14_2000+.rds')
 saveRDS(list(ind35q1q3,ind36q1q3,ind38q1q3),'IndicesFromFullComboModelFeb14_2000+_q1q3.rds')
 
-#b = readRDS('IndicesFromFullComboModelJan17_2000+.rds')
+#b = readRDS('IndicesFromFullComboModelFeb14_2000+.rds')
 #ind351=b[[1]]
 #ind361=b[[2]]
 #ind381=b[[3]]
@@ -178,10 +178,13 @@ g8 = ggplot(subset(ind38),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+ge
 
 ###everywhere
       g = predict(model,newdata=f,return_tmb_object = T)
-      h = g$data
+      indall = get_index(g,bias_correct = T)
+      saveRDS(indall,'IndicesFromFullComboModelFeb14_2000+_allareas.rds')
+      
+            h = g$data
       h$pred = model$family$linkinv(h$est)
       gsf = st_as_sf(h)
-
+      
 
 ##features
 
