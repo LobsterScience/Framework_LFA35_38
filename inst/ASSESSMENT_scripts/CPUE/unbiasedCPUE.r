@@ -13,7 +13,7 @@ fd = file.path(project.datadirectory('Framework_LFA35_38'),'outputs','CPUE')
 setwd(fd)
 
 aT = lobster.db('process.logs')
-aT = subset(aT,SYEAR>2005 & SYEAR<2025 & LFA %in% c(35,36,38))
+aT = subset(aT,SYEAR>2005 & SYEAR<2026 & LFA %in% c(35,36,38))
 
 
 aa = split(aT,f=list(aT$LFA,aT$SYEAR))

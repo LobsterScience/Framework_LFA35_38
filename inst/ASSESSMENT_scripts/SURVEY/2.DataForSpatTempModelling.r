@@ -56,6 +56,8 @@ y = subset(y,select=c(id,YEAR,SET_LONG,SET_LAT,SA_CORRECTED_PRORATED_N,Survey))
 x = RV_sets()
 x = subset(x,month(DATE) %in% 6:8)
 x$N = x$Recruit+x$Legal
+x$N = x$N/x$OFFSET
+
 x$id = paste(x$mission,x$setno,sep="-")
 x = subset(x,select=c(id,YEAR,LONGITUDE,LATITUDE,N))
 x$LONGITUDE = ifelse(x$LONGITUDE>0,x$LONGITUDE*-1,x$LONGITUDE )
@@ -115,4 +117,7 @@ st_geometry(ba) = NULL
 survey$z = ba$z[ss]
 survey$z_dist = as.numeric(ds)
 
-saveRDS(survey,file='survey_data_all_combined.rds')
+saveRDS(survey,file='survey_data_all_combined_jan152026.rds')
+
+b = aggregate(N~YEAR+Survey,data=survey,FUN=mean)
+ggplot(b,aes(x=YEAR,y=N))+geom_point()+facet_wrap(~Survey,scales='free_y')

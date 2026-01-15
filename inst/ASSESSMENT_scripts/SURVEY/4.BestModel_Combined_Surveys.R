@@ -18,9 +18,11 @@ crs_utm20 <- 32620
 
 fd=file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS')
 setwd(fd)
-survey = readRDS( file='survey_data_all_combined.rds')
-survey = st_as_sf(survey)
+#survey = readRDS( file='survey_data_all_combined.rds')
 
+survey = readRDS( file='C:/Users/cooka/Downloads/survey_data_all_combined 1.rds')
+survey = st_as_sf(survey)
+survey=subset(survey, YEAR>1999)
 ns_coast =readRDS(file.path( project.datadirectory("bio.lobster"), "data","maps","CoastSF.rds"))
 st_crs(ns_coast) <- 4326 # 'WGS84'; necessary on some installs
 
@@ -77,7 +79,7 @@ data$RV_Summer <- ifelse(data$Survey=="RV_Summer", 1, 0)
 
   ##########this section will change depending on teh best model from the Multimodel section in 3.
   # # Build B-spline basis functions ; needed to have time varying depth relationship
-  k <- 3 
+  k <- 4 
   knots <- quantile(data$depth.scaled, p = seq(0, 1, len = k)[-c(1,k)])
   bs <- bs(data$depth.scaled, knots = knots, intercept = FALSE)
   bs <- as.data.frame(bs)
@@ -90,7 +92,7 @@ data$RV_Summer <- ifelse(data$Survey=="RV_Summer", 1, 0)
     data = data_bs,
     formula = N ~ 0 + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall,
     mesh = mesh,
-    time_varying = ~ 1 + bs1 + bs2 + bs3 + bs4,
+    time_varying = ~ 1 + bs1 + bs2 + bs3 + bs4+bs5,
     spatial = "on",
     family = tweedie(link = "log"),
     time = "year",
@@ -100,8 +102,8 @@ data$RV_Summer <- ifelse(data$Survey=="RV_Summer", 1, 0)
 
 
 # Save model results:
-saveRDS(model, file = file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS', "bestModel_commLobster2000+feb142025.rds"))
-model = readRDS( file = file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS', "bestModel_commLobster2000+feb142025.rds"))
+saveRDS(model, file = file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS', "bestModel_commLobster2000+Jan152026.rds"))
+model = readRDS( file = file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS', "bestModel_commLobster2000+Jan152026.rds"))
 
 
 data$resids <- residuals(model) # randomized quantile residuals
@@ -163,8 +165,8 @@ ind38q1q3 = get_index(g38,bias_correct = T,level=0.25)
 g8 = ggplot(subset(ind38),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
 
 
-saveRDS(list(ind35,ind36,ind38),'IndicesFromFullComboModelFeb14_2000+.rds')
-saveRDS(list(ind35q1q3,ind36q1q3,ind38q1q3),'IndicesFromFullComboModelFeb14_2000+_q1q3.rds')
+saveRDS(list(ind35,ind36,ind38),'IndicesFromFullComboModelJan152026_2000+.rds')
+saveRDS(list(ind35q1q3,ind36q1q3,ind38q1q3),'IndicesFromFullComboModelJan152026_2000+_q1q3.rds')
 
 #b = readRDS('IndicesFromFullComboModelFeb14_2000+.rds')
 #ind351=b[[1]]
@@ -179,7 +181,7 @@ g8 = ggplot(subset(ind38),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+ge
 ###everywhere
       g = predict(model,newdata=f,return_tmb_object = T)
       indall = get_index(g,bias_correct = T)
-      saveRDS(indall,'IndicesFromFullComboModelFeb14_2000+_allareas.rds')
+      saveRDS(indall,'IndicesFromFullComboModelJan152026_2000+_allareas.rds')
       
             h = g$data
       h$pred = model$family$linkinv(h$est)
@@ -217,7 +219,7 @@ st_crs(rL) <- 32620
 
 ####maps of residuals
 da = st_as_sf(data)
-ggplot(subset(da)) +
+ggplot(subset(da,year %in% c(2000,2008,2016,2023,2024,2025))) +
   geom_sf(aes(fill=resids,color=resids),size=1.3) + 
   scale_fill_viridis_c() +
   scale_color_viridis_c() +
@@ -232,11 +234,11 @@ gsfr = subset(gsf,PID %in% c(34,35,36,38) & Y1000>4850)
 #mm = c(0.,max(quantile(gsfr$pred,.999)))
 #gsfr$CommB = ifelse(gsfr$pred>mm[2],mm[2],gsfr$pred)
 gsfr$CommN = gsfr$pred
-gb = ggplot(subset(gsfr, year %in% c(2023))) +
+gb = ggplot(subset(gsfr, year %in% c(2000,2008,2016,2023,2024,2025))) +
   geom_sf(aes(fill=CommN,color=CommN),size=2.1) + 
   scale_fill_viridis_c(trans='log') +
   scale_color_viridis_c(trans='log') +
-#  facet_wrap(~year) +
+  facet_wrap(~year) +
   geom_sf(data=ns_coast,fill='black')+
   geom_sf(data=rL,colour='black',fill=NA)+
   theme_test_adam()+
