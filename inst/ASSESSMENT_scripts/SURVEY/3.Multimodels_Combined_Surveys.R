@@ -19,9 +19,9 @@ crs_utm20 <- 32620
 fd=file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS')
 setwd(fd)
 path = fd
-survey = readRDS( file='survey_data_all_combined.rds')
+survey = readRDS( file='survey_data_all_combined_jan152026.rds')
 survey = st_as_sf(survey)
-
+bio.directory = file.path('~/git')
 ns_coast =readRDS(file.path( bio.directory,"bio.lobster.data", "mapping_data","CoastSF.rds"))
 st_crs(ns_coast) <- 4326 # 'WGS84'; necessary on some installs
 
@@ -63,20 +63,20 @@ data = subset(data,year>=2000)
 
 spde <- make_mesh(data, xy_cols = c("X1000", "Y1000"),
                   n_knots=350,type = "cutoff_search")
-plot(spde)
+#plot(spde)
 
 # Add on the barrier mesh component:
 mesh <- sdmTMBextra::add_barrier_mesh(
   spde, ns_coast, range_fraction = 0.1,
-  proj_scaling = 1000, plot = TRUE
+  proj_scaling = 1000, plot = FALSE
 )
 mesh_df_water <- mesh$mesh_sf[mesh$normal_triangles, ]
 mesh_df_land <- mesh$mesh_sf[mesh$barrier_triangles, ]
-ggplot(ns_coast) +
-  geom_sf() +
-  geom_sf(data = mesh_df_water, size = 1, colour = "blue") +
-  geom_sf(data = mesh_df_land, size = 1, colour = "green")+
-  coord_sf()
+#ggplot(ns_coast) +
+#  geom_sf() +
+#  geom_sf(data = mesh_df_water, size = 1, colour = "blue") +
+#  geom_sf(data = mesh_df_land, size = 1, colour = "green")+
+#  coord_sf()
 
 
 
