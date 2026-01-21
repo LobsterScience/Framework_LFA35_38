@@ -29,12 +29,12 @@ crs_utm20 <- 32620
 
 fd=file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS')
 setwd(fd)
-io = readRDS('IndicesFromFullComboModelJan17_2000+.rds')
+io = readRDS('IndicesFromFullComboModelJan192026_2000+.rds')
 ind35 = io[[1]]
 
 ##converting number to biomass using fall length frequencies from all fall surveys in bay of fundy
 
-yp = ILTS_ITQ_All_Data(redo_base_data = F,size=c(82,300),aggregate=F,species=2550,biomass = F,extend_ts = F)
+yp = ILTS_ITQ_All_Data(redo_base_data = F,size=c(82,300),aggregate=F,species=2550,biomass = F)
 yp2 = subset(yp, month(SET_DATE)>8)
 
 yp2 = aggregate(SA_CORRECTED_PRORATED_N~FISH_LENGTH,data=yp2,FUN=mean)
@@ -50,7 +50,7 @@ ind35$estB = ind35$est*mnW/1000
 ind35$lwrB = ind35$lwr*mnW/1000
 ind35$uprB = ind35$upr*mnW/1000
 
-xx = readRDS('IndicesFromFullComboModelFeb14_2000+_q1q3.rds')
+xx = readRDS('IndicesFromFullComboModelJan192026_2000+_q1q3.rds')
 ind35q1q3 = xx[[1]]
 
 ind35q1q3$estB = ind35q1q3$est*mnW/1000
@@ -58,15 +58,14 @@ ind35q1q3$lwrB = ind35q1q3$lwr*mnW/1000
 ind35q1q3$uprB = ind35q1q3$upr*mnW/1000
 
 
-mm = readRDS('IndicesFromFullComboModelFeb14_2000+_q1q3.rds')
 #lower 25%
-ind35lwr = subset(mm[[1]],year==2024,select=lwr)
-ind36lwr = subset(mm[[2]],year==2024,select=lwr)
-ind38lwr = subset(mm[[3]],year==2024,select=lwr)
+ind35lwr = subset(xx[[1]],year==2025,select=lwr)
+ind36lwr = subset(xx[[2]],year==2025,select=lwr)
+ind38lwr = subset(xx[[3]],year==2025,select=lwr)
 ta = data.frame(LFA=c(35,36,38),TermB.25=c(as.numeric(ind35lwr)*mnW/1000,as.numeric(ind36lwr)*mnW/1000,as.numeric(ind38lwr)*mnW/1000))
 
 #change from max
-mean(ind35$estB[which(ind35$year == 2024)]) /mean(ind35$estB[order(ind35$estB,decreasing = T)][1:3]) 
+mean(ind35$estB[which(ind35$year == 2025)]) /mean(ind35$estB[order(ind35$estB,decreasing = T)][1:3]) 
 
 
 with(subset(ind35,year>=2018),mean(estB))
@@ -223,5 +222,5 @@ gll$relF_u = gll$LFA35/(gll$uprB/1000)
 ggplot(subset(gll),aes(x=year,y=relF,ymin=relF_l,ymax=relF_u))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+
   theme_test(base_size = 14)+labs(x='Year',y='Relative Fishing Mortality ')
 
-saveRDS(list(ind35,LRP_buff,g5,b,mL,gll),file='LFA35Index_RPs_Feb18_2025.rds')
+saveRDS(list(ind35,LRP_buff,g5,b,mL,gll),file='LFA35Index_RPs_Jan20_2026.rds')
 

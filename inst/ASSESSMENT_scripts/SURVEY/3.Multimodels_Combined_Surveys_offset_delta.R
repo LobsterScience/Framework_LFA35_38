@@ -19,7 +19,7 @@ crs_utm20 <- 32620
 fd=file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS')
 setwd(fd)
 path = fd
-survey = readRDS( file='survey_data_all_combined_jan152026.rds')
+survey = readRDS( file='survey_data_all_combined_jan182026_offset.rds')
 survey = st_as_sf(survey)
 bio.directory = file.path('~/git')
 ns_coast =readRDS(file.path( bio.directory,"bio.lobster.data", "mapping_data","CoastSF.rds"))
@@ -63,7 +63,7 @@ data = subset(data,year>=2000)
 
 spde <- make_mesh(data, xy_cols = c("X1000", "Y1000"),
                   n_knots=350,type = "cutoff_search")
-#plot(spde)
+plot(spde)
 
 # Add on the barrier mesh component:
 mesh <- sdmTMBextra::add_barrier_mesh(
@@ -123,13 +123,13 @@ mod.select.fn <- function (){
   
   c$"Sum loglik" <- m_cv$sum_loglik
   
-  m_cvTT = sdmTMBcv_tntpreds(m_cv)
-  fitTT = dplyr::bind_rows(m_cvTT)
-  fitTT$sqR = fitTT$n - fitTT$pred
-  c$MAE_test<-  with(fitTT[fitTT$tt=='test',],mae(as.numeric(n),as.numeric(pred)))
-  c$MAE_train<-  with(fitTT[fitTT$tt=='train',],mae(as.numeric(n),as.numeric(pred)))
-  c$RMSE_test <- with(fitTT[fitTT$tt=='test',],rmse(as.numeric(n),as.numeric(pred)))
-  c$RMSE_train <- with(fitTT[fitTT$tt=='train',],rmse(as.numeric(n),as.numeric(pred)))
+#  m_cvTT = sdmTMBcv_tntpreds(m_cv)
+#  fitTT = dplyr::bind_rows(m_cvTT)
+#  fitTT$sqR = fitTT$n - fitTT$pred
+#  c$MAE_test<-  with(fitTT[fitTT$tt=='test',],mae(as.numeric(n),as.numeric(pred)))
+#  c$MAE_train<-  with(fitTT[fitTT$tt=='train',],mae(as.numeric(n),as.numeric(pred)))
+#  c$RMSE_test <- with(fitTT[fitTT$tt=='test',],rmse(as.numeric(n),as.numeric(pred)))
+#  c$RMSE_train <- with(fitTT[fitTT$tt=='train',],rmse(as.numeric(n),as.numeric(pred)))
   
   
   return(c)
@@ -137,9 +137,12 @@ mod.select.fn <- function (){
 }
 
 # ###what models to run
-models <-c( "m3", "m4",'m6','m7', "m9", "m10") 
+models <-c( "m3", "m4",'m6','m7', "m9", "m10",'m11') 
 # ##adding spatial effects, time
-label='jan26'
+label='jan1826'
+data$nLOFFSET = data$OFFSET
+data$OFFSET = log(data$OFFSET)
+
 if ("m3" %in% models) {
   
   mod.label <- "m3" 
@@ -150,25 +153,27 @@ if ("m3" %in% models) {
     data=data,
     formula = n  ~ depth.scaled + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall,
     mesh = mesh,
+    offset=data$OFFSET,
     spatial = "on",
-    family = tweedie(link = "log"),
+    family = delta_gamma(),
     time = "year",
     spatiotemporal = "ar1")
   
   
   ##model cross-validation
   
-  m_cv <- sdmTMB_cv(
-    data=data,
-    formula = n  ~ depth.scaled + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall,
-    mesh = mesh, 
-    spatial = "on",
-    family = tweedie(link = "log"),
-    time = "year",
-    spatiotemporal = "ar1",
-    fold_ids = 'fold_id',
-    k_folds = k_folds
-  )
+ # m_cv <- sdmTMB_cv(
+#    data=data,
+#    formula = n  ~ depth.scaled + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall,
+#    mesh = mesh, 
+#    offset='OFFSET',
+#    spatial = "on",
+#    family = delta_gamma(),
+#    time = "year",
+#    spatiotemporal = "ar1",
+#    fold_ids = 'fold_id',
+ #   k_folds = k_folds
+ # )
   
   c <-mod.select.fn()
   mod.select <- rbind(mod.select, c)
@@ -179,7 +184,7 @@ if ("m3" %in% models) {
   save(m, file = paste0(path, "MAR_Lobster_ALL", "_", mod.label, "_", label,  ".rdata"))
   
   m3 <- m
-  m3_cv <- m_cv
+#  m3_cv <- m_cv
 }
 
 
@@ -196,23 +201,25 @@ if ("m4" %in% models) {
     mesh = mesh,
     time_varying = ~ 1 + depth.scaled, #the 1 means an annual intercept for depth
     spatial = "on",
-    family = tweedie(link = "log"),
+    offset=data$OFFSET,
+    family = delta_gamma(),
     time = "year",
     spatiotemporal = "ar1"
   )
   
-  m_cv <- sdmTMB_cv(  
-    data=data,
-    formula = n ~ 0 + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall, 
-    mesh = mesh,
-    time_varying = ~ 1 + depth.scaled, #the 1 means an annual intercept for depth
-    spatial = "on",
-    family = tweedie(link = "log"),
-    time = "year",
-    spatiotemporal = "ar1",
-    fold_ids = 'fold_id',
-    k_folds = k_folds
-  )
+  # m_cv <- sdmTMB_cv(  
+  #   data=data,
+  #   formula = n ~ 0 + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall, 
+  #   mesh = mesh,
+  #   time_varying = ~ 1 + depth.scaled, #the 1 means an annual intercept for depth
+  #   spatial = "on",
+  #   family = delta_gamma(),
+  #   offset='OFFSET',
+  #   time = "year",
+  #   spatiotemporal = "ar1",
+  #   fold_ids = 'fold_id',
+  #   k_folds = k_folds
+  # )
   
   c <-mod.select.fn()
   mod.select <- rbind(mod.select, c)
@@ -223,7 +230,7 @@ if ("m4" %in% models) {
   save(m, file = paste0(path, "MAR_Lobster_ALL", "_", mod.label, "_", label,  ".rdata"))
   
   m4 <- m
-  m4_cv <- m_cv
+  #m4_cv <- m_cv
   
 }
 
@@ -244,27 +251,30 @@ if ("m6" %in% models) {
   m <- sdmTMB(
     data = data_bs,
     formula = n ~ 0 + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall,
+    offset=data_bs$OFFSET,
+    
     mesh = mesh,
     time_varying = ~ 1 + bs1 + bs2 + bs3 + bs4 + bs5,
     spatial = "on",
-    family = tweedie(link = "log"),
+    family = delta_gamma(),
     time = "year",
     spatiotemporal = "ar1"
   )
   
-  m_cv <- sdmTMB_cv(
-    data = data_bs,
-    formula = n ~ 0 + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall,
-    mesh = mesh,
-    time_varying = ~ 1 + bs1 + bs2 + bs3 + bs4 + bs5,
-    spatial = "on",
-    family = tweedie(link = "log"),
-    time = "year",
-    spatiotemporal = "ar1",
-    fold_ids = 'fold_id',
-    k_folds=k_folds
-  )
-  
+  # m_cv <- sdmTMB_cv(
+  #   data = data_bs,
+  #   formula = n ~ 0 + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall,
+  #   mesh = mesh,
+  #   offset='OFFSET',
+  #   time_varying = ~ 1 + bs1 + bs2 + bs3 + bs4 + bs5,
+  #   spatial = "on",
+  #   family = delta_gamma(),
+  #   time = "year",
+  #   spatiotemporal = "ar1",
+  #   fold_ids = 'fold_id',
+  #   k_folds=k_folds
+  # )
+  # 
   c <-mod.select.fn()
   mod.select <- rbind(mod.select, c)
   
@@ -272,7 +282,7 @@ if ("m6" %in% models) {
   # Save model results:
   save(m, file = paste0(path, "MAR_Lobster_ALL", "_", mod.label, "_", label,  ".rdata"))
   m6 <-m
-  m6_cv <-m_cv
+ # m6_cv <-m_cv
   
 }
 
@@ -293,25 +303,29 @@ if ("m7" %in% models) {
     data = data_bs,
     formula = n ~ 0 + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall,
     mesh = mesh,
+    offset=data_bs$OFFSET,
+    
     time_varying = ~ 1 + bs1 + bs2 + bs3 + bs4,
     spatial = "on",
-    family = tweedie(link = "log"),
+    family = delta_gamma(),
     time = "year",
     spatiotemporal = "ar1"
   )
   
-  m_cv <- sdmTMB_cv(
-    data = data_bs,
-    formula = n ~ 0 + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall + RV_Summer,
-    mesh = mesh,
-    time_varying = ~ 1 + bs1 + bs2 + bs3 + bs4,
-    spatial = "on",
-    family = tweedie(link = "log"),
-    time = "year",
-    spatiotemporal = "ar1",
-    fold_ids = 'fold_id',
-    k_folds=k_folds
-  )
+  # m_cv <- sdmTMB_cv(
+  #   data = data_bs,
+  #   formula = n ~ 0 + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall + RV_Summer,
+  #   mesh = mesh,
+  #   offset='OFFSET',
+  #   
+  #   time_varying = ~ 1 + bs1 + bs2 + bs3 + bs4,
+  #   spatial = "on",
+  #   family = delta_gamma(),
+  #   time = "year",
+  #   spatiotemporal = "ar1",
+  #   fold_ids = 'fold_id',
+  #   k_folds=k_folds
+  # )
   
   c <-mod.select.fn()
   mod.select <- rbind(mod.select, c)
@@ -320,7 +334,7 @@ if ("m7" %in% models) {
   # Save model results:
   save(m, file = paste0(path, "MAR_Lobster_ALL", "_", mod.label, "_", label,  ".rdata"))
   
-  m7_cv <- m_cv
+#  m7_cv <- m_cv
   m7 <-m
   
 }
@@ -335,34 +349,38 @@ if ("m9" %in% models) {
     data=data,
     formula = n ~ 0 + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall, 
     mesh = mesh,
+    offset=data$OFFSET,
+    
     time_varying = ~ 1 + depth.scaled + depth.scaled2, #the 1 means an annual intercept for depth
     spatial = "on",
-    family = tweedie(link = "log"),
+    family = delta_gamma(),
     time = "year",
     spatiotemporal = "ar1"
   )
   
-  m_cv <- sdmTMB_cv(  
-    data=data,
-    formula = n ~ 0 + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall, 
-    mesh = mesh,
-    time_varying = ~ 1 + depth.scaled + depth.scaled2, #the 1 means an annual intercept for depth
-    spatial = "on",
-    family = tweedie(link = "log"),
-    time = "year",
-    spatiotemporal = "ar1",
-    fold_ids = 'fold_id',
-    k_folds = k_folds
-  )
-  
-  c <-mod.select.fn()
+  # m_cv <- sdmTMB_cv(  
+  #   data=data,
+  #   formula = n ~ 0 + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall, 
+  #   mesh = mesh,
+  #   offset='OFFSET',
+  #   
+  #   time_varying = ~ 1 + depth.scaled + depth.scaled2, #the 1 means an annual intercept for depth
+  #   spatial = "on",
+  #   family = delta_gamma(),
+  #   time = "year",
+  #   spatiotemporal = "ar1",
+  #   fold_ids = 'fold_id',
+  #   k_folds = k_folds
+  # )
+  # 
+  # c <-mod.select.fn()
   mod.select <- rbind(mod.select, c)
   
   summary(m)
   # Save model results:
   save(m, file = paste0(path, "MAR_Lobster_ALL", "_", mod.label, "_", label,  ".rdata"))
   m9 <-m
-  m9_cv <- m_cv
+  #m9_cv <- m_cv
   
 }
 
@@ -376,26 +394,30 @@ if ("m10" %in% models) {
     data=data,
     formula = n ~ 0 + s(depth.scaled, year) + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall, 
     mesh = mesh,
+    offset=data$OFFSET,
+    
     time_varying = ~ 1, #the 1 means an annual intercept for depth
     spatial = "on",
-    family = tweedie(link = "log"),
+    family = delta_gamma(),
     time = "year",
     spatiotemporal = "ar1"
   )
   
-  m_cv <- sdmTMB_cv(  
-    data=data,
-    formula = n ~ 0 + s(depth.scaled, year) + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall + RV_Summer, 
-    mesh = mesh,
-    time_varying = ~ 1, #the 1 means an annual intercept for depth
-    spatial = "on",
-    family = tweedie(link = "log"),
-    time = "year",
-    spatiotemporal = "ar1",
-    fold_ids = 'fold_id',
-    k_folds = k_folds
-  )
-  
+  # m_cv <- sdmTMB_cv(  
+  #   data=data,
+  #   formula = n ~ 0 + s(depth.scaled, year) + ILTS_Fall + MNH_Fall + MNH_NEFSC_Fall + RV_Summer, 
+  #   mesh = mesh,
+  #   offset='OFFSET',
+  #   
+  #   time_varying = ~ 1, #the 1 means an annual intercept for depth
+  #   spatial = "on",
+  #   family = delta_gamma(),
+  #   time = "year",
+  #   spatiotemporal = "ar1",
+  #   fold_ids = 'fold_id',
+  #   k_folds = k_folds
+  # )
+  # 
   c <-mod.select.fn()
   mod.select <- rbind(mod.select, c)
   
@@ -403,7 +425,7 @@ if ("m10" %in% models) {
   # Save model results:
   save(m, file = paste0(path, "MAR_Lobster_ALL", "_", mod.label, "_", label,  ".rdata"))
   m10 <-m
-  m10_cv <- m_cv
+#  m10_cv <- m_cv
   
 }
 
@@ -416,55 +438,48 @@ if ("m11" %in% models) {
   data$fs = as.factor(data$Survey)
   m <- sdmTMB(  
     data=data,
-    formula = n ~ s(depth.scaled)+fs,
+    offset=data$OFFSET,
+    formula = n ~ s(depth.scaled)+Survey,
     mesh = mesh,
-    time_varying = ~ 1, #the 1 means an annual intercept for depth
+  #  time_varying = ~ 1, #the 1 means an annual intercept for depth
     spatial = "on",
-    family = tweedie(link = "log"),
+    family = delta_gamma(),
     time = "year",
     spatiotemporal = "ar1"
   )
-  cAIC(m)
-  m_cv <- sdmTMB_cv(  
-    data=data,
-    formula = n ~  s(depth.scaled)+fs, 
-    mesh = mesh,
-    time_varying = ~ 1, #the 1 means an annual intercept for depth
-    spatial = "on",
-    family = tweedie(link = "log"),
-    time = "year",
-    spatiotemporal = "ar1",
-    fold_ids = 'fold_id',
-    k_folds = k_folds
-  )
-  
+  # m_cv <- sdmTMB_cv(  
+  #   data=data,
+  #   formula = n ~  s(depth.scaled)+fs, 
+  #   offset='OFFSET',
+  #   mesh = mesh,
+  #   time_varying = ~ 1, #the 1 means an annual intercept for depth
+  #   spatial = "on",
+  #   family = delta_gamma(),
+  #   time = "year",
+  #   spatiotemporal = "ar1",
+  #   fold_ids = 'fold_id',
+  #   k_folds = k_folds
+  # )
+  # 
   c <-mod.select.fn()
   mod.select <- rbind(mod.select, c)
   
   summary(m)
   # Save model results:
   save(m, file = paste0(path, "MAR_Lobster_ALL", "_", mod.label, "_", label,  ".rdata"))
-  m10 <-m
-  m10_cv <- m_cv
+  m11 <-m
+#  m11_cv <- m_cv
   
 }
 
 
 ##extra step because formulas mess up saving to a csv
-mod.select = rbind(mod.select,data.frame(lapply(c, as.character), stringsAsFactors=FALSE))
-###cAIC
-mod.select$cAIC[1] = cAIC(m3)
-mod.select$cAIC[2] = cAIC(m4)
-mod.select$cAIC[3] = cAIC(m6)
-mod.select$cAIC[4] = cAIC(m7)
-mod.select$cAIC[5] = cAIC(m9)
-mod.select$cAIC[6] = cAIC(m10)
-
-write.csv(mod.select, file = file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS','allsurveys_model runs_jan17_2026.csv'), row.names = FALSE)
+mod.select = data.frame(lapply(c, as.character), stringsAsFactors=FALSE)
+write.csv(mod.select, file = file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS','allsurveys_model runs_jan19_delta_2026.csv'), row.names = FALSE)
 
 # Save model results:
 ###model m6 best by criteria but residuals had a lot of spatial and temporal patterns and thus discarded.
-model = m7
+model = m11
 
 saveRDS(model, file = file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS', "summer_fall_Lobster model7 abund_jan17.rds"))
 model = readRDS( file = file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS', "summer_fall_Lobster model7 abund_jan17.rds"))

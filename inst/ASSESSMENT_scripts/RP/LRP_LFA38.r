@@ -30,12 +30,12 @@ crs_utm20 <- 32620
 
 fd=file.path(project.datadirectory('Assessment_LFA35_38'),'outputs','SURVEYS')
 setwd(fd)
-io = readRDS('IndicesFromFullComboModelFeb14_2000+.rds')
+io = readRDS('IndicesFromFullComboModelJan192026_2000+.rds')
 ind38 = io[[3]]
 
 ##converting number to biomass using fall length frequencies from all fall surveys in bay of fundy
 
-yp = ILTS_ITQ_All_Data(redo_base_data = F,size=c(82,300),aggregate=F,species=2550,biomass = F,extend_ts = F)
+yp = ILTS_ITQ_All_Data(redo_base_data = F,size=c(82,300),aggregate=F,species=2550,biomass = F)
 yp2 = subset(yp, month(SET_DATE)>8)
 
 yp2 = aggregate(SA_CORRECTED_PRORATED_N~FISH_LENGTH,data=yp2,FUN=mean)
@@ -65,11 +65,16 @@ ggplot(subset(ind38),aes(x=year,y=estB/1000,ymin=lwrB/1000,ymax=uprB/1000))+geom
 ind38$year=ind38$year+1
 
 g = lobster.db('seasonal.landings')
-g$year= as.numeric(substring(g$SYEAR,6,9))
-g = na.zero(g, 'LFA38B')
-g$LFA38 = g$LFA38+g$LFA38B
-
-gll = merge(ind38,g[,c('year','LFA38')])
+ga = lobster.db('annual.landings')
+ga = subset(ga,select=c('YR','LFA38B'))
+ga = ga[order(ga$YR),]
+g$YR= as.numeric(substring(g$SYEAR,6,9))
+g = subset(g,select=c(YR,LFA38))
+ga = na.zero(ga, 'LFA38B')
+gg = merge(ga,g)
+gg$LFA38 = gg$LFA38+gg$LFA38B
+gg$year = gg$YR
+gll = merge(ind38,gg[,c('year','LFA38')])
 
 gll$relF = gll$LFA38/(gll$estB/1000)
 gll$relF_l = gll$LFA38/(gll$lwrB/1000)
@@ -81,5 +86,5 @@ gll$relF_u = gll$LFA38/(gll$uprB/1000)
 ggplot(subset(gll),aes(x=year,y=relF,ymin=relF_l,ymax=relF_u))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+
   theme_test(base_size = 14)+labs(x='Year',y='Relative Fishing Mortality ')
 
-saveRDS(list(ind38,br,gll),file='LFA38Index_RPs_Feb18_2025.rds')
+saveRDS(list(ind38,br,gll),file='LFA38Index_RPs_Jan21_2026.rds')
 

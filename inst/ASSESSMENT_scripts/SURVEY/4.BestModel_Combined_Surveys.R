@@ -165,25 +165,25 @@ ind38q1q3 = get_index(g38,bias_correct = T,level=0.25)
 g8 = ggplot(subset(ind38),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
 
 
-saveRDS(list(ind35,ind36,ind38),'IndicesFromFullComboModelJan152026_2000+.rds')
-saveRDS(list(ind35q1q3,ind36q1q3,ind38q1q3),'IndicesFromFullComboModelJan152026_2000+_q1q3.rds')
+saveRDS(list(ind35,ind36,ind38),'IndicesFromFullComboModelJan192026_2000+.rds')
+saveRDS(list(ind35q1q3,ind36q1q3,ind38q1q3),'IndicesFromFullComboModelJan192026_2000+_q1q3.rds')
 
 #b = readRDS('IndicesFromFullComboModelFeb14_2000+.rds')
 #ind351=b[[1]]
 #ind361=b[[2]]
 #ind381=b[[3]]
 
-g5 = ggplot(subset(ind35,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000) ')
-g6 = ggplot(subset(ind36,year<2024),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
+g5 = ggplot(subset(ind35,year<2026),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000) ')
+g6 = ggplot(subset(ind36,year<2026),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
 g8 = ggplot(subset(ind38),aes(x=year,y=est/1000,ymin=lwr/1000,ymax=upr/1000))+geom_point()+geom_line()+geom_ribbon(alpha=.25)+theme_test(base_size = 14)+labs(x='Year',y='Commercial Abundance (x000)')
 
 
 ###everywhere
       g = predict(model,newdata=f,return_tmb_object = T)
       indall = get_index(g,bias_correct = T)
-      saveRDS(indall,'IndicesFromFullComboModelJan152026_2000+_allareas.rds')
+      saveRDS(indall,'IndicesFromFullComboModelJan192026_2000+_allareas.rds')
       
-            h = g$data
+      h = g$data
       h$pred = model$family$linkinv(h$est)
       gsf = st_as_sf(h)
       
